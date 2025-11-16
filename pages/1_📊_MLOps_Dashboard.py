@@ -154,6 +154,9 @@ try:
         
         # Create comparison dataframe
         comparison_data = []
+        complete_runs = 0
+        incomplete_runs = 0
+        
         for run in runs:
             metrics = run.data.metrics
             params = run.data.params
@@ -165,9 +168,26 @@ try:
             f1 = metrics.get('test_f1') or metrics.get('f1', 0)
             roc_auc = metrics.get('test_roc_auc') or metrics.get('roc_auc', 0)
             
+            # Check if run has all metrics
+            has_all_metrics = all([
+                'test_accuracy' in metrics or 'accuracy' in metrics,
+                'test_precision' in metrics or 'precision' in metrics,
+                'test_recall' in metrics or 'recall' in metrics,
+                'test_f1' in metrics or 'f1' in metrics,
+                'test_roc_auc' in metrics or 'roc_auc' in metrics
+            ])
+            
+            if has_all_metrics:
+                complete_runs += 1
+                data_quality = "✅ Complete"
+            else:
+                incomplete_runs += 1
+                data_quality = "⚠️ Partial"
+            
             comparison_data.append({
                 "Run ID": run.info.run_id[:8],
                 "Date": datetime.fromtimestamp(run.info.start_time / 1000).strftime("%Y-%m-%d %H:%M"),
+                "Data": data_quality,
                 "Accuracy": accuracy,
                 "Precision": precision,
                 "Recall": recall,
@@ -181,8 +201,11 @@ try:
         
         df = pd.DataFrame(comparison_data)
         
-        # Add debugging info
-        st.info(f"📊 Found {len(df)} model run(s) in MLflow")
+        # Add debugging info with quality metrics
+        if incomplete_runs > 0:
+            st.warning(f"⚠️ Found {incomplete_runs} old run(s) with only accuracy metric. Run `python cleanup_mlflow.py` to clean them up, or `python train.py` to add more complete runs.")
+        
+        st.info(f"📊 Total: {len(df)} run(s) | ✅ Complete: {complete_runs} | ⚠️ Partial: {incomplete_runs}")
         
         # Key Metrics Section
         st.subheader("🎯 Key Performance Indicators")
@@ -203,6 +226,25 @@ try:
         
         # Model Comparison Table
         st.subheader("📋 All Trained Models")
+        
+        if incomplete_runs > 0:
+            with st.expander("ℹ️ Why do some runs show 0% for most metrics?", expanded=False):
+                st.markdown("""
+                **Old runs only logged accuracy** because your original `train.py` only tracked one metric.
+                
+                After updating `train.py`, new runs log all 5 metrics:
+                - ✅ test_accuracy
+                - ✅ test_precision  
+                - ✅ test_recall
+                - ✅ test_f1
+                - ✅ test_roc_auc
+                
+                **Solutions:**
+                1. **Keep old runs** - Shows your progress over time (recommended)
+                2. **Delete old runs** - Run `python cleanup_mlflow.py`
+                3. **Add more complete runs** - Run `python train.py` multiple times
+                """)
+        
         st.markdown("*Showing detailed metrics for all training runs*")
         
         # Format the dataframe for better display

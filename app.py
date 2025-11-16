@@ -476,9 +476,15 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
         return None
     
     try:
-        # Initialize Groq client (compatible with groq 0.11.0)
-        # Only pass api_key parameter, no other kwargs
-        client = Groq(api_key=api_key)
+        # Disable proxy detection for Groq client on Streamlit Cloud
+        # This fixes the "unexpected keyword argument 'proxies'" error
+        import httpx
+        
+        # Create custom HTTP client without proxy
+        http_client = httpx.Client(proxies=None)
+        
+        # Initialize Groq client with custom HTTP client
+        client = Groq(api_key=api_key, http_client=http_client)
         
         # Build context about the customer
         risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"

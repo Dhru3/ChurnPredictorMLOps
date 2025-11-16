@@ -6,6 +6,7 @@ streamlit==1.39.0
 shap==0.45.0
 plotly==5.24.1
 groq==0.11.0
+httpx
 python-dotenv==1.0.1
 numpy<2,>=1.23.0
 scipy>=1.11.0

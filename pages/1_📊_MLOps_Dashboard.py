@@ -128,6 +128,9 @@ try:
         
         df = pd.DataFrame(comparison_data)
         
+        # Add debugging info
+        st.info(f"📊 Found {len(df)} model run(s) in MLflow")
+        
         # Key Metrics Section
         st.subheader("🎯 Key Performance Indicators")
         col1, col2, col3, col4, col5 = st.columns(5)
@@ -147,19 +150,17 @@ try:
         
         # Model Comparison Table
         st.subheader("📋 All Trained Models")
-        st.markdown("*Rows highlighted in green show best performance for each metric*")
+        st.markdown("*Showing detailed metrics for all training runs*")
+        
+        # Format the dataframe for better display
+        df_display = df.copy()
+        
+        # Convert metrics to percentages for display
+        for col in ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC']:
+            df_display[col] = df_display[col].apply(lambda x: f"{x:.2%}" if x > 0 else "0.00%")
         
         # Style the dataframe
-        def highlight_max(s):
-            is_max = s == s.max()
-            return ['background-color: #d4edda; font-weight: bold' if v else '' for v in is_max]
-        
-        styled_df = df.style.apply(
-            highlight_max, 
-            subset=['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC']
-        )
-        
-        st.dataframe(styled_df, use_container_width=True, height=400)
+        st.dataframe(df_display, use_container_width=True, height=400)
         
         # Download button
         csv = df.to_csv(index=False)

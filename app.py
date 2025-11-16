@@ -22,12 +22,12 @@ from mlflow.tracking import MlflowClient
 load_dotenv()
 
 # Import prediction logging from monitoring dashboard
-sys.path.append('pages')
 try:
     from pages.production_monitor import save_prediction_log
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     # Fallback if module not available
     def save_prediction_log(*args, **kwargs):
+        """Dummy function when production_monitor is not available"""
         pass
 
 # Page configuration
@@ -458,20 +458,19 @@ def generate_simple_explanation(customer_data, prediction, probability, top_risk
 
 def generate_retention_strategy(customer_data, prediction, probability, top_factors):
     """Generate personalized retention strategy using Groq's Llama 3.1 8B."""
-    api_key = os.getenv("GROQ_API_KEY")
-    
-    if not api_key:
-        st.warning("⚠️ Groq API key not found. Set GROQ_API_KEY in .env file to enable AI-powered retention strategies.")
-        return None
+    # Check if GROQ_API_KEY exists in st.secrets (Streamlit Cloud)
+    if "GROQ_API_KEY" not in st.secrets:
+        # Fallback to environment variable (local development)
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            st.warning("⚠️ Groq API key not found. Add GROQ_API_KEY to Streamlit Cloud secrets or .env file to enable AI-powered retention strategies.")
+            return None
+    else:
+        api_key = st.secrets["GROQ_API_KEY"]
     
     try:
-        # Initialize Groq client with minimal parameters for compatibility
-        try:
-            client = Groq(api_key=api_key)
-        except TypeError:
-            # Fallback for older Groq versions
-            from groq import Client
-            client = Client(api_key=api_key)
+        # Initialize Groq client
+        client = Groq(api_key=api_key)
         
         # Build context about the customer
         risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"

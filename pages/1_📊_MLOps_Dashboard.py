@@ -105,14 +105,21 @@ try:
             metrics = run.data.metrics
             params = run.data.params
             
+            # Handle both old and new metric naming conventions
+            accuracy = metrics.get('test_accuracy') or metrics.get('accuracy', 0)
+            precision = metrics.get('test_precision') or metrics.get('precision', 0)
+            recall = metrics.get('test_recall') or metrics.get('recall', 0)
+            f1 = metrics.get('test_f1') or metrics.get('f1', 0)
+            roc_auc = metrics.get('test_roc_auc') or metrics.get('roc_auc', 0)
+            
             comparison_data.append({
                 "Run ID": run.info.run_id[:8],
                 "Date": datetime.fromtimestamp(run.info.start_time / 1000).strftime("%Y-%m-%d %H:%M"),
-                "Accuracy": metrics.get('test_accuracy', 0),
-                "Precision": metrics.get('test_precision', 0),
-                "Recall": metrics.get('test_recall', 0),
-                "F1-Score": metrics.get('test_f1', 0),
-                "ROC-AUC": metrics.get('test_roc_auc', 0),
+                "Accuracy": accuracy,
+                "Precision": precision,
+                "Recall": recall,
+                "F1-Score": f1,
+                "ROC-AUC": roc_auc,
                 "n_estimators": params.get('n_estimators', 'N/A'),
                 "max_depth": params.get('max_depth', 'N/A'),
                 "min_samples_split": params.get('min_samples_split', 'N/A'),

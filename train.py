@@ -110,14 +110,35 @@ def train_and_register() -> None:
     with mlflow.start_run(run_name="random_forest_baseline"):
         mlflow.log_param("model_type", "RandomForest")
         mlflow.log_param("n_estimators", pipeline.named_steps["model"].n_estimators)
+        mlflow.log_param("max_depth", str(pipeline.named_steps["model"].max_depth))
+        mlflow.log_param("min_samples_split", pipeline.named_steps["model"].min_samples_split)
         mlflow.log_param("min_samples_leaf", pipeline.named_steps["model"].min_samples_leaf)
 
         pipeline.fit(X_train, y_train)
+        
+        # Make predictions
+        y_pred = pipeline.predict(X_test)
 
-        accuracy = accuracy_score(y_test, pipeline.predict(X_test))
-        mlflow.log_metric("accuracy", accuracy)
+        # Calculate and log all metrics
+        from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
+        
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred, average='binary')
+        recall = recall_score(y_test, y_pred, average='binary')
+        f1 = f1_score(y_test, y_pred, average='binary')
+        
+        # For ROC-AUC, we need probability predictions
+        y_pred_proba = pipeline.predict_proba(X_test)[:, 1]
+        roc_auc = roc_auc_score(y_test, y_pred_proba)
+        
+        # Log metrics with consistent naming for dashboard
+        mlflow.log_metric("test_accuracy", accuracy)
+        mlflow.log_metric("test_precision", precision)
+        mlflow.log_metric("test_recall", recall)
+        mlflow.log_metric("test_f1", f1)
+        mlflow.log_metric("test_roc_auc", roc_auc)
 
-        report = classification_report(y_test, pipeline.predict(X_test), output_dict=True)
+        report = classification_report(y_test, y_pred, output_dict=True)
         mlflow.log_text(json.dumps(report, indent=2), "classification_report.json")
 
         input_example = X_test.iloc[:5]
@@ -131,7 +152,12 @@ def train_and_register() -> None:
             input_example=input_example,
         )
 
-        print(f"Training complete. Accuracy: {accuracy:.4f}")
+        print(f"Training complete:")
+        print(f"  Accuracy:  {accuracy:.4f}")
+        print(f"  Precision: {precision:.4f}")
+        print(f"  Recall:    {recall:.4f}")
+        print(f"  F1-Score:  {f1:.4f}")
+        print(f"  ROC-AUC:   {roc_auc:.4f}")
         
         # Set 'champion' alias for the latest version (modern replacement for Production stage)
         client = mlflow.MlflowClient()

@@ -461,15 +461,22 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
     # Check if GROQ_API_KEY exists in st.secrets (Streamlit Cloud)
     try:
         api_key = st.secrets["GROQ_API_KEY"]
-    except (KeyError, FileNotFoundError, AttributeError):
+        # Debug: Show that key was loaded (don't show actual key)
+        st.info("🔑 API key loaded from Streamlit secrets")
+    except (KeyError, FileNotFoundError, AttributeError) as e:
+        # Try environment variable fallback
         api_key = os.getenv("GROQ_API_KEY")
+        if api_key:
+            st.info("🔑 API key loaded from environment variable")
+        else:
+            st.error(f"🔍 Debug: Failed to load from secrets - {type(e).__name__}")
     
     if not api_key:
         st.warning("⚠️ Groq API key not found. Add GROQ_API_KEY to Streamlit Cloud secrets or .env file to enable AI-powered retention strategies.")
         return None
     
     try:
-        # Initialize Groq client (compatible with groq 0.9.0)
+        # Initialize Groq client (compatible with groq 0.11.0)
         # Only pass api_key parameter, no other kwargs
         client = Groq(api_key=api_key)
         

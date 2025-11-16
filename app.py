@@ -462,7 +462,6 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
     try:
         api_key = st.secrets["GROQ_API_KEY"]
     except (KeyError, FileNotFoundError, AttributeError):
-        # Fallback to environment variable (local development)
         api_key = os.getenv("GROQ_API_KEY")
     
     if not api_key:

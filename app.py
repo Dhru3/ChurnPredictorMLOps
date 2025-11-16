@@ -375,11 +375,6 @@ def generate_simple_explanation(customer_data, prediction, probability, top_risk
 def generate_retention_strategy(customer_data, prediction, probability, top_factors):
     """Generate personalized retention strategy using Groq's Llama 3.1 8B."""
     # Load API key from Streamlit secrets ONLY (no .env fallback)
-    
-    # Debug: Show what secrets are available
-    st.write("🔍 **Debug Info:**")
-    st.write(f"Available secret keys: {list(st.secrets.keys())}")
-    
     if "groq_api_key" not in st.secrets:
         st.error("❌ Groq API key not found in Streamlit Cloud secrets!")
         st.info("""
@@ -391,7 +386,6 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
         return None
     
     api_key = st.secrets["groq_api_key"]
-    st.success(f"✅ API key loaded! Length: {len(api_key)} characters")
     
     try:
         # --- The Definitive Streamlit Cloud Proxy Fix ---

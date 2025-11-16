@@ -109,6 +109,7 @@ st.markdown("""
     .explanation-box {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         padding: 2rem;
+        text-color: #1e293b;
         border-radius: 16px;
         margin: 1rem 0;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -630,7 +631,6 @@ def main():
             <ul>
                 <li><strong>🎯 Predictive AI</strong>: A <code>joblib</code>-packaged scikit-learn pipeline for churn prediction.</li>
                 <li><strong>🧠 Explainable AI</strong>: SHAP analysis showing <em>why</em> customers churn with actionable insights.</li>
-                <li><strong>✨ Generative AI</strong>: Google's Gemini generating personalized retention strategies.</li>
             </ul>
             
             </div>

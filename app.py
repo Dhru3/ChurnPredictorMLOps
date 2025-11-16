@@ -622,19 +622,6 @@ def main():
         st.markdown("""
             ## 👋 Welcome to the Hybrid AI Churn-Bot!
             
-            <div class="explanation-box">
-            
-            ### 🌟 This Is Not Just Another ML Model...
-            
-            This is a <strong>complete intelligent system</strong> that combines <strong>THREE powerful AI technologies</strong>:
-            
-            <ul>
-                <li><strong>🎯 Predictive AI</strong>: A <code>joblib</code>-packaged scikit-learn pipeline for churn prediction.</li>
-                <li><strong>🧠 Explainable AI</strong>: SHAP analysis showing <em>why</em> customers churn with actionable insights.</li>
-            </ul>
-            
-            </div>
-            
             ### 🚀 How to Use:
             1. **Fill in** the customer profile form in the sidebar ←
             2. **Click** "🔮 Predict Churn" to get instant AI analysis.

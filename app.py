@@ -5,7 +5,6 @@ Combines MLOps (MLflow model) with Explainable AI for customer retention
 """
 import joblib
 from pathlib import Path
-import sys
 
 import numpy as np
 import pandas as pd
@@ -14,18 +13,9 @@ import shap
 import streamlit as st
 
 # Import prediction logging from monitoring dashboard
-PROJECT_ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(PROJECT_ROOT / "pages"))
-
 try:
-    # Import the actual module using importlib since filename has emoji
-    import importlib.util
-    monitor_path = PROJECT_ROOT / "pages" / "2_📡_Production_Monitor.py"
-    spec = importlib.util.spec_from_file_location("production_monitor", monitor_path)
-    production_monitor = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(production_monitor)
-    save_prediction_log = production_monitor.save_prediction_log
-except Exception as e:
+    from pages.production_monitor import save_prediction_log
+except (ImportError, ModuleNotFoundError):
     # Fallback if module not available
     def save_prediction_log(*args, **kwargs):
         """Dummy function when production_monitor is not available"""

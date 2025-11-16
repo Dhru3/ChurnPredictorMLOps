@@ -2,6 +2,7 @@
 """Train and register the Telco churn model with MLflow."""
 from __future__ import annotations
 
+import joblib
 import json
 from pathlib import Path
 from typing import Tuple
@@ -24,6 +25,7 @@ TRACKING_DB = PROJECT_ROOT / "mlflow.db"
 ARTIFACT_DIR = PROJECT_ROOT / "mlruns"
 EXPERIMENT_NAME = "churn-experiments"
 MODEL_NAME = "churn-predictor"
+PIPELINE_PATH = PROJECT_ROOT / "churn_pipeline.pkl"
 
 
 def load_dataset() -> pd.DataFrame:
@@ -136,6 +138,11 @@ def train_and_register() -> None:
         model_version = model_info.registered_model_version
         client.set_registered_model_alias(MODEL_NAME, "champion", model_version)
         print(f"✅ Model registered as '{MODEL_NAME}' version {model_version} with 'champion' alias")
+    
+    # Save the final pipeline to a single file using joblib (for Streamlit deployment)
+    print(f"\n💾 Saving pipeline to {PIPELINE_PATH}...")
+    joblib.dump(pipeline, PIPELINE_PATH)
+    print(f"✅ Model saved to churn_pipeline.pkl")
 
 
 if __name__ == "__main__":

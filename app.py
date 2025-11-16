@@ -3,23 +3,15 @@
 Hybrid AI Churn-Bot: Mission Control Dashboard
 Combines MLOps (MLflow model) with Generative AI for customer retention
 """
-import os
-import sys
+import joblib
 from pathlib import Path
 
-import mlflow
-import mlflow.pyfunc
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shap
 import streamlit as st
-from dotenv import load_dotenv
 from groq import Groq
-from mlflow.tracking import MlflowClient
-
-# Load environment variables
-load_dotenv()
 
 # Import prediction logging from monitoring dashboard
 try:
@@ -162,80 +154,34 @@ st.markdown("""
 
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parent
-TRACKING_DB = PROJECT_ROOT / "mlflow.db"
-MODEL_NAME = "churn-predictor"
+PIPELINE_PATH = PROJECT_ROOT / "churn_pipeline.pkl"
 
-# Initialize MLflow
+# Simple model loading with joblib
 @st.cache_resource
-def init_mlflow():
-    """Initialize MLflow connection and client."""
-    import os
-    # Use relative path for Streamlit Cloud compatibility
-    tracking_uri = f"sqlite:///{os.path.join(os.getcwd(), 'mlflow.db')}"
-    mlflow.set_tracking_uri(tracking_uri)
-    return MlflowClient()
-
-@st.cache_resource
-def load_model():
-    """Load the best model from MLflow runs (direct file loading for Streamlit Cloud)."""
-    import glob
-    import os
-    
+def load_model_pipeline():
+    """Load the trained pipeline from churn_pipeline.pkl."""
     try:
-        # Find all model.pkl files in mlruns
-        project_root = os.getcwd()
-        model_files = glob.glob(os.path.join(project_root, "mlruns/*/*/artifacts/model/model.pkl"))
-        
-        if not model_files:
-            st.error("No trained models found in mlruns/ directory.")
-            st.info("The MLOps dashboards will still work, but predictions require a trained model.")
-            st.stop()
-        
-        # Sort by modification time to get the latest
-        model_files.sort(key=os.path.getmtime, reverse=True)
-        latest_model_dir = os.path.dirname(model_files[0])
-        
-        # Load the model directly from the directory
-        model = mlflow.pyfunc.load_model(latest_model_dir)
-        
-        # Extract run ID from path for display
-        run_id = latest_model_dir.split('/')[-3]
-        return model, f"Run {run_id[:8]}"
-        
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
+        model = joblib.load(PIPELINE_PATH)
+        return model
+    except FileNotFoundError:
+        st.error("❌ Model file 'churn_pipeline.pkl' not found!")
         st.info("""
-        **Troubleshooting:**
-        - Ensure `mlruns/` folder is in your GitHub repository
-        - Check that model files exist in `mlruns/1/*/artifacts/model/`
-        - Try retraining the model locally: `python train.py`
+        **To fix this:**
+        1. Run `python train.py` locally to generate `churn_pipeline.pkl`
+        2. Add, commit, and push `churn_pipeline.pkl` to your GitHub repository
+        3. Redeploy your Streamlit app
         """)
         st.stop()
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.stop()
 
-def get_shap_explainer(model):
-    """Create SHAP explainer for the model."""
-    # Extract the sklearn pipeline from pyfunc wrapper
-    try:
-        # Access the sklearn model from the MLflow sklearn wrapper
-        sklearn_pipeline = model._model_impl.sklearn_model
-    except AttributeError:
-        try:
-            # Fallback: try alternative attribute
-            sklearn_pipeline = model._model_impl._model
-        except AttributeError:
-            # Final fallback - use the model directly
-            sklearn_pipeline = model
-    
-    # SHAP needs the actual tree model, not the pipeline
-    # Extract the RandomForest from the pipeline
-    if hasattr(sklearn_pipeline, 'named_steps'):
-        # It's a Pipeline - get the 'model' step
-        tree_model = sklearn_pipeline.named_steps['model']
-    else:
-        # It's already the model
-        tree_model = sklearn_pipeline
-    
-    return shap.TreeExplainer(tree_model)
+def get_shap_explainer(pipeline):
+    """Create SHAP explainer for the model from the pipeline."""
+    # Extract the classifier from the pipeline
+    # The pipeline has steps: [('preprocessor', ...), ('model', RandomForestClassifier)]
+    classifier = pipeline.named_steps['model']
+    return shap.TreeExplainer(classifier)
 
 def create_input_form():
     """Create the customer input form in the sidebar."""
@@ -314,58 +260,30 @@ def create_input_form():
         return customer_data
     return None
 
-def make_prediction(model, customer_data):
+def make_prediction(pipeline, customer_data):
     """Make churn prediction and get probability."""
     df = pd.DataFrame([customer_data])
     
-    # Get the sklearn model for probability prediction
-    try:
-        # Access the sklearn model from the MLflow sklearn wrapper
-        sklearn_model = model._model_impl.sklearn_model
-    except AttributeError:
-        try:
-            # Fallback: try to use the pyfunc predict method
-            # MLflow pyfunc doesn't have predict_proba, so we need the actual model
-            sklearn_model = model._model_impl._model
-        except AttributeError:
-            # Final fallback - use the model directly if it's already unwrapped
-            sklearn_model = model
-    
-    proba = float(sklearn_model.predict_proba(df)[0][1])
+    # The pipeline handles all preprocessing automatically
+    proba = float(pipeline.predict_proba(df)[0][1])
     prediction = "Yes" if proba >= 0.5 else "No"
     
     return prediction, proba, df
 
-def explain_prediction(model, customer_data_df):
+def explain_prediction(pipeline, customer_data_df):
     """Generate SHAP explanation for the prediction."""
-    # Get the sklearn pipeline
-    try:
-        sklearn_pipeline = model._model_impl.sklearn_model
-    except AttributeError:
-        try:
-            sklearn_pipeline = model._model_impl._model
-        except AttributeError:
-            sklearn_pipeline = model
+    # Extract preprocessor and classifier from the pipeline
+    preprocessor = pipeline.named_steps['preprocessor']
+    classifier = pipeline.named_steps['model']
     
-    # Transform the data through preprocessing steps
-    if hasattr(sklearn_pipeline, 'named_steps'):
-        # Get preprocessor and transform data
-        preprocessor = sklearn_pipeline.named_steps['preprocessor']
-        transformed_data = preprocessor.transform(customer_data_df)
-        
-        # Get feature names after transformation
-        try:
-            feature_names = preprocessor.get_feature_names_out()
-        except AttributeError:
-            # Fallback for older sklearn versions
-            feature_names = None
-    else:
-        # No preprocessing, use raw data
-        transformed_data = customer_data_df
-        feature_names = customer_data_df.columns.tolist()
+    # Transform the data through preprocessing
+    transformed_data = preprocessor.transform(customer_data_df)
     
-    # Get SHAP explainer (uses the tree model only)
-    explainer = get_shap_explainer(model)
+    # Get feature names after transformation
+    feature_names = preprocessor.get_feature_names_out()
+    
+    # Create SHAP explainer using the classifier
+    explainer = shap.TreeExplainer(classifier)
     shap_values = explainer.shap_values(transformed_data)
     
     # For binary classification, use the positive class (churn = 1)
@@ -373,10 +291,8 @@ def explain_prediction(model, customer_data_df):
         shap_values = shap_values[1]
     
     # Handle different SHAP value shapes
-    # Shape can be: (n_samples, n_features) or (n_samples, n_features, n_classes)
     if len(shap_values.shape) == 3:
         # Shape is (n_samples, n_features, n_classes)
-        # Extract: first sample, all features, class 1 (churn)
         shap_values = shap_values[0, :, 1]
     elif len(shap_values.shape) == 2:
         # Shape is (n_samples, n_features) - take first sample
@@ -458,22 +374,18 @@ def generate_simple_explanation(customer_data, prediction, probability, top_risk
 
 def generate_retention_strategy(customer_data, prediction, probability, top_factors):
     """Generate personalized retention strategy using Groq's Llama 3.1 8B."""
-    # Check if GROQ_API_KEY exists in st.secrets (Streamlit Cloud)
-    try:
-        api_key = st.secrets["GROQ_API_KEY"]
-        # Debug: Show that key was loaded (don't show actual key)
-        st.info("🔑 API key loaded from Streamlit secrets")
-    except (KeyError, FileNotFoundError, AttributeError) as e:
-        # Try environment variable fallback
-        api_key = os.getenv("GROQ_API_KEY")
-        if api_key:
-            st.info("🔑 API key loaded from environment variable")
-        else:
-            st.error(f"🔍 Debug: Failed to load from secrets - {type(e).__name__}")
-    
-    if not api_key:
-        st.warning("⚠️ Groq API key not found. Add GROQ_API_KEY to Streamlit Cloud secrets or .env file to enable AI-powered retention strategies.")
+    # Load API key from Streamlit secrets ONLY (no .env fallback)
+    if "groq_api_key" not in st.secrets:
+        st.error("❌ Groq API key not found in Streamlit Cloud secrets!")
+        st.info("""
+        **To fix this:**
+        1. Go to your Streamlit Cloud app settings
+        2. Add a secret: `groq_api_key = "your_api_key_here"`
+        3. Reboot your app
+        """)
         return None
+    
+    api_key = st.secrets["groq_api_key"]
     
     try:
         # Disable proxy detection for Groq client on Streamlit Cloud
@@ -639,14 +551,13 @@ def main():
     st.markdown('<p class="subtitle">Combining Predictive AI + Explainable AI + Generative AI (Groq Llama 3.1)</p>', unsafe_allow_html=True)
     st.markdown("---")
     
-    # Initialize MLflow and load model
-    client = init_mlflow()
-    model, model_stage = load_model()
+    # Load the model pipeline
+    model = load_model_pipeline()
     
     # Display model info with style
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.info(f"🚀 **Active Model**: {MODEL_NAME} ({model_stage}) | **Powered by**: Groq Llama 3.1 8B")
+        st.info("🚀 **Active Model**: v1.0 (churn_pipeline.pkl) | **Powered by**: Groq Llama 3.1 8B")
     
     # Sidebar input form
     customer_data = create_input_form()

@@ -174,29 +174,45 @@ def init_mlflow():
 
 @st.cache_resource
 def load_model():
-    """Load the champion model from MLflow registry (modern alias system)."""
+    """Load the best model from MLflow runs (bypasses registry for Streamlit Cloud compatibility)."""
     try:
-        # Try loading model with 'champion' alias (modern MLflow approach)
-        model_uri = f"models:/{MODEL_NAME}@champion"
-        model = mlflow.pyfunc.load_model(model_uri)
-        return model, "Champion"
-    except Exception:
+        client = init_mlflow()
+        
+        # Try to load from model registry first
         try:
-            # Fallback: Try old Production stage for backwards compatibility
-            model_uri = f"models:/{MODEL_NAME}/Production"
-            model = mlflow.pyfunc.load_model(model_uri)
-            return model, "Production"
-        except Exception:
-            # Final fallback: Use latest version
-            client = init_mlflow()
             versions = client.search_model_versions(f"name='{MODEL_NAME}'")
-            if not versions:
-                st.error(f"No model named '{MODEL_NAME}' found. Please run train.py first.")
-                st.stop()
-            latest = max(versions, key=lambda mv: int(mv.version))
-            model_uri = f"models:/{MODEL_NAME}/{latest.version}"
-            model = mlflow.pyfunc.load_model(model_uri)
-            return model, f"Version {latest.version}"
+            if versions:
+                # Get the latest registered version
+                latest = max(versions, key=lambda mv: int(mv.version))
+                # Load directly from the run artifacts (not from registry URI)
+                run_id = latest.run_id
+                model_uri = f"runs:/{run_id}/model"
+                model = mlflow.pyfunc.load_model(model_uri)
+                return model, f"Registered v{latest.version}"
+        except Exception as e:
+            st.warning(f"Could not load from registry: {e}")
+        
+        # Fallback: Load from any available run
+        runs = client.search_runs(
+            experiment_ids=["1"],
+            order_by=["start_time DESC"],
+            max_results=1
+        )
+        
+        if not runs:
+            st.error(f"No model runs found. Please run train.py first.")
+            st.stop()
+        
+        # Load model from the most recent run
+        run_id = runs[0].info.run_id
+        model_uri = f"runs:/{run_id}/model"
+        model = mlflow.pyfunc.load_model(model_uri)
+        return model, f"Latest Run"
+        
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.error("Please ensure the model was trained and MLflow files are in the repository.")
+        st.stop()
 
 def get_shap_explainer(model):
     """Create SHAP explainer for the model."""

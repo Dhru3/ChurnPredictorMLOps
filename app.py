@@ -63,7 +63,7 @@ st.markdown("""
         font-weight: 500;
     }
     
-    /* Modern Card Styling */
+    /* Modern Card Styling with Gradient */
     .stMetric {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1.5rem;
@@ -105,7 +105,7 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
     }
     
-    /* Explanation Box - Slate Gray */
+    /* Explanation Box - Modern Gradient */
     .explanation-box {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         padding: 2rem;
@@ -115,7 +115,7 @@ st.markdown("""
         border: 1px solid #cbd5e1;
     }
     
-    /* Strategy Cards - Modern Professional */
+    /* Strategy Cards - Color-coded by Type */
     .strategy-card {
         background: white;
         padding: 1.5rem;
@@ -147,7 +147,7 @@ st.markdown("""
         font-size: 0.95rem;
     }
     
-    /* Factor Items - Clean Modern Style */
+    /* Factor Items - Gradient Hover */
     .factor-item {
         padding: 0.75rem 1rem;
         margin: 0.5rem 0;
@@ -162,9 +162,10 @@ st.markdown("""
     .factor-item:hover {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         transform: translateX(4px);
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
     }
     
-    /* Modern Button Styling */
+    /* Modern Button Styling with Gradient */
     .stButton > button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -180,20 +181,21 @@ st.markdown("""
     .stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
     }
     
     /* Sidebar Styling */
-    .css-1d391kg {
+    section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
     }
     
-    /* Progress bars */
+    /* Progress bars with Gradient */
     .stProgress > div > div {
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         border-radius: 10px;
     }
     
-    /* Expander */
+    /* Expander with Subtle Gradient */
     .streamlit-expanderHeader {
         background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
         border-radius: 8px;
@@ -201,7 +203,11 @@ st.markdown("""
         color: #1e293b;
     }
     
-    /* Metrics - Enhanced */
+    .streamlit-expanderHeader:hover {
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    }
+    
+    /* Metrics - Enhanced with White Text */
     div[data-testid="stMetricValue"] {
         font-size: 2rem;
         font-weight: 700;
@@ -214,29 +220,39 @@ st.markdown("""
         font-weight: 500;
     }
     
-    /* Info boxes */
+    /* Info boxes with Gradients */
     .stInfo {
         background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
         border-left: 4px solid #3b82f6;
         color: #1e40af;
+        border-radius: 8px;
     }
     
     .stSuccess {
         background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
         border-left: 4px solid #10b981;
         color: #065f46;
+        border-radius: 8px;
     }
     
     .stWarning {
         background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
         border-left: 4px solid #f59e0b;
         color: #92400e;
+        border-radius: 8px;
     }
     
     .stError {
         background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
         border-left: 4px solid #ef4444;
         color: #991b1b;
+        border-radius: 8px;
+    }
+    
+    /* Add glassmorphism effect to main content */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -627,15 +643,21 @@ def main():
         
         This is a **complete intelligent system** that combines **TWO powerful AI technologies**:
         
-        - **🎯 Predictive AI**: MLflow-registered RandomForest model for churn prediction
-        - **🧠 Explainable AI**: SHAP analysis showing *why* customers churn with actionable insights
+        <div style="margin: 1.5rem 0;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.2rem; border-radius: 12px; margin-bottom: 1rem; color: black; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                <strong style="font-size: 1.1rem;">🎯 Predictive AI:</strong> MLflow-registered RandomForest model for churn prediction
+            </div>
+            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1.2rem; border-radius: 12px; color: black; box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);">
+                <strong style="font-size: 1.1rem;">🧠 Explainable AI:</strong> SHAP analysis showing <em>why</em> customers churn with actionable insights
+            </div>
+        </div>
         
         </div>
         
         ### 🚀 How to Use:
         1. **Fill in** the customer profile form in the sidebar ←
         2. **Click** "🔮 Predict Churn" to get instant AI analysis
-        3. **Review** explanations, reasons, and AI-generated retention emails
+        3. **Review** explanations, reasons, and retention strategies
         
         ### 💡 Try These Quick Test Scenarios:
         

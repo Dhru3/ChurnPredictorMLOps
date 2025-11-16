@@ -287,7 +287,7 @@ def create_input_form():
             "Credit card (automatic)"
         ])
         
-        submitted = st.form_submit_button("🔮 Predict Churn", width="stretch")
+        submitted = st.form_submit_button("🔮 Predict Churn", use_container_width=True)
     
     if submitted:
         customer_data = {

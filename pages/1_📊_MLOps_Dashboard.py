@@ -128,15 +128,17 @@ try:
     st.sidebar.success(f"📂 Experiment: {selected_experiment}\n- ID: {experiment.experiment_id if experiment else 'N/A'}")
     
     if experiment:
-        # Get all runs with better error handling
+        # Get all ACTIVE runs (exclude deleted runs)
         try:
             runs = client.search_runs(
                 experiment_ids=[experiment.experiment_id],
-                order_by=["start_time DESC"],  # Changed from metrics.test_accuracy to avoid missing metric errors
-                max_results=50
+                filter_string="",  # Empty filter to get all active runs
+                order_by=["start_time DESC"],
+                max_results=50,
+                run_view_type=mlflow.entities.ViewType.ACTIVE_ONLY  # Only show active runs, not deleted
             )
             
-            st.sidebar.info(f"📊 Found {len(runs)} run(s)")
+            st.sidebar.info(f"📊 Found {len(runs)} active run(s)")
             
         except Exception as e:
             st.error(f"Error searching runs: {e}")

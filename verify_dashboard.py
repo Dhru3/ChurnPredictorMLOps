@@ -22,11 +22,12 @@ if not experiment:
     print("❌ No experiment found!")
     exit(1)
 
-# Get all runs
+# Get all ACTIVE runs (same as dashboard)
 runs = client.search_runs(
     experiment_ids=[experiment.experiment_id],
     order_by=["start_time DESC"],
-    max_results=50
+    max_results=50,
+    run_view_type=mlflow.entities.ViewType.ACTIVE_ONLY  # Only active runs
 )
 
 print(f"\n📊 Total runs found: {len(runs)}\n")

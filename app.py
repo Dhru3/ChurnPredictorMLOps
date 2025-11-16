@@ -465,7 +465,13 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
         return None
     
     try:
-        client = Groq(api_key=api_key)
+        # Initialize Groq client with minimal parameters for compatibility
+        try:
+            client = Groq(api_key=api_key)
+        except TypeError:
+            # Fallback for older Groq versions
+            from groq import Client
+            client = Client(api_key=api_key)
         
         # Build context about the customer
         risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"

@@ -5,8 +5,7 @@ Combines MLOps (MLflow model) with Generative AI for customer retention
 """
 import joblib
 from pathlib import Path
-import os
-import httpx
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -30,7 +29,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-st.error("--- THIS IS MY NEWEST CODE - v5 ---")
 # Custom CSS for stunning styling
 st.markdown("""
     <style>
@@ -668,7 +666,7 @@ def main():
     """Main application logic."""
     # Header with animation
     st.markdown('<h1 class="main-header">🤖 Hybrid AI Churn-Bot: Mission Control</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">Combining Predictive AI + Explainable AI + Generative AI (Groq Llama 3.1)</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">Combining Predictive AI + Explainable AI + Generative AI (Google Gemini)</p>', unsafe_allow_html=True)
     st.markdown("---")
     
     # Load the model pipeline
@@ -677,7 +675,7 @@ def main():
     # Display model info with style
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.info("🚀 **Active Model**: v1.0 (churn_pipeline.pkl) | **Powered by**: Groq Llama 3.1 8B")
+        st.info("🚀 **Active Model**: v1.0 (churn_pipeline.pkl) | **Powered by**: Google Gemini 1.5 Flash")
     
     # Sidebar input form
     customer_data = create_input_form()
@@ -695,7 +693,7 @@ def main():
         
         - **🎯 Predictive AI**: MLflow-registered RandomForest model for churn prediction
         - **🧠 Explainable AI**: SHAP analysis showing *why* customers churn
-        - **✨ Generative AI**: Groq's Llama 3.1 8B creating personalized retention emails
+        - **✨ Generative AI**: Google Gemini 1.5 Flash creating personalized retention emails
         
         </div>
         
@@ -730,7 +728,7 @@ def main():
         with col3:
             st.metric("⚡ Avg Response Time", "<2s", help="Prediction + Explanation + AI Email")
         with col4:
-            st.metric("🤖 AI Model", "Llama 3.1 8B", help="Groq-powered generation")
+            st.metric("🤖 AI Model", "Gemini 1.5 Flash", help="Google AI-powered generation")
         
     else:
         # Make prediction
@@ -844,7 +842,7 @@ def main():
         if prediction == "Yes":
             st.markdown("## ✉️ AI-Generated Retention Email")
             st.markdown("### 💼 Professional Email Drafted by AI")
-            st.info("🤖 This email was personalized using Groq's Llama 3.1 8B based on customer segment, risk level, and specific pain points.")
+            st.info("🤖 This email was personalized using Google Gemini 1.5 Flash based on customer segment, risk level, and specific pain points.")
             
             with st.spinner("✍️ Drafting personalized retention email..."):
                 email_content = generate_retention_strategy(
@@ -888,11 +886,11 @@ def main():
                     if st.button("📧 Send Email", width="stretch"):
                         st.info("Email integration coming soon!")
             else:
-                st.error("❌ Could not generate email. Please add your Groq API key to Streamlit secrets.")
+                st.error("❌ Could not generate email. Please add your Google API key to Streamlit secrets.")
                 st.markdown("""
                 **To enable AI email generation:**
-                1. Get a free Groq API key from https://console.groq.com/
-                2. Add it to Streamlit Cloud secrets: `groq_api_key = "your_key_here"`
+                1. Get a free Google AI API key from https://aistudio.google.com/app/apikey
+                2. Add it to Streamlit Cloud secrets: `google_api_key = "your_key_here"`
                 3. Reboot your app
                 """)
         
@@ -928,7 +926,7 @@ def main():
     st.markdown("""
     <div style='text-align: center; color: #666; padding: 2rem 0;'>
     <p style='font-size: 1.2rem; font-weight: 600;'>🤖 Hybrid AI Churn-Bot</p>
-    <p style='font-size: 0.9rem;'>Powered by MLflow + SHAP + Groq Llama 3.1 8B</p>
+    <p style='font-size: 0.9rem;'>Powered by MLflow + SHAP + Google Gemini 1.5 Flash</p>
     <p style='font-size: 0.85rem; color: #999;'>Combining Predictive AI + Explainable AI + Generative AI</p>
     <p style='font-size: 0.8rem; margin-top: 1rem;'>⚡ Lightning-fast predictions • 🧠 Crystal-clear explanations • ✨ AI-powered retention</p>
     </div>

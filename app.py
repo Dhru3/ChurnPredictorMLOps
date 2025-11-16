@@ -768,12 +768,12 @@ def main():
                     if st.button("📧 Send Email", width="stretch"):
                         st.info("Email integration coming soon!")
             else:
-                st.error("❌ Could not generate email. Please check your GROQ_API_KEY in .env file.")
+                st.error("❌ Could not generate email. Please add your Groq API key to Streamlit secrets.")
                 st.markdown("""
                 **To enable AI email generation:**
                 1. Get a free Groq API key from https://console.groq.com/
-                2. Add it to your `.env` file: `GROQ_API_KEY=your_key_here`
-                3. Restart the app
+                2. Add it to Streamlit Cloud secrets: `groq_api_key = "your_key_here"`
+                3. Reboot your app
                 """)
         
         else:

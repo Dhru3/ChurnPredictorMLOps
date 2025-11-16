@@ -13,6 +13,10 @@ from datetime import datetime
 
 st.set_page_config(page_title="MLOps Dashboard", page_icon="📊", layout="wide")
 
+# Clear any Streamlit cache to ensure fresh data
+st.cache_data.clear()
+st.cache_resource.clear()
+
 # MLflow setup
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 TRACKING_DB = PROJECT_ROOT / "mlflow.db"

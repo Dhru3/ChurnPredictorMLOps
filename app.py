@@ -394,13 +394,13 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
     st.success(f"✅ API key loaded! Length: {len(api_key)} characters")
     
     try:
-        # Disable proxy detection for Groq client on Streamlit Cloud
-        # This fixes the "unexpected keyword argument 'proxies'" error
+        # --- The Definitive Streamlit Cloud Proxy Fix ---
+        
+        # 1. Add required imports at the top of this function
         import os
-        
-        st.write("🔧 Setting up Groq client...")
-        
-        # Disable all proxy environment variables BEFORE importing anything else
+        import httpx
+
+        # 2. Nuke all proxy environment variables (Belt)
         os.environ.pop('HTTP_PROXY', None)
         os.environ.pop('HTTPS_PROXY', None)
         os.environ.pop('http_proxy', None)
@@ -409,13 +409,24 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
         os.environ.pop('all_proxy', None)
         os.environ.pop('NO_PROXY', None)
         os.environ.pop('no_proxy', None)
+
+        # 3. Create a custom client that EXPLICITLY ignores proxies (Suspenders)
+        #    proxies={}: Sets no proxies
+        #    trust_env=False: Tells httpx to NOT look at env vars
+        http_client = httpx.Client(
+            proxies={},
+            trust_env=False
+        )
+
+        # 4. Force Groq to use OUR clean client
+        client = Groq(
+            api_key=api_key,
+            http_client=http_client  # <--- This is the most critical line
+        )
         
-        st.write("✅ Proxy env vars cleared")
+        st.toast("Groq client initialized successfully!", icon="✅")
         
-        # Initialize Groq client WITHOUT custom http_client
-        # Let it create its own client with no proxy env vars present
-        client = Groq(api_key=api_key)
-        st.write("✅ Groq client initialized successfully!")
+        # --- End of Fix ---
         
         # Build context about the customer
         risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"

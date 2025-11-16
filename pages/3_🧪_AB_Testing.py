@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from mlflow.tracking import MlflowClient
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
-from scipy.stats import mcnemar
+from statsmodels.stats.contingency_tables import mcnemar
 import warnings
 warnings.filterwarnings('ignore')
 

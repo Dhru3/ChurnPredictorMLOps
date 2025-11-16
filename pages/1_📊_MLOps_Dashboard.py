@@ -44,10 +44,47 @@ st.title("📊 MLOps Model Comparison Dashboard")
 st.markdown("**Compare all trained models and select the champion**")
 st.markdown("---")
 
+# Show registered models first
+st.subheader("🏆 Registered Models")
+try:
+    registered_models = client.search_registered_models()
+    if registered_models:
+        for model in registered_models:
+            with st.expander(f"📦 {model.name}", expanded=True):
+                st.write(f"**Description:** {model.description or 'No description'}")
+                
+                # Get model versions
+                versions = client.search_model_versions(f"name='{model.name}'")
+                st.write(f"**Total Versions:** {len(versions)}")
+                
+                # Show versions in a table
+                version_data = []
+                for version in versions:
+                    aliases = version.aliases if hasattr(version, 'aliases') else []
+                    version_data.append({
+                        "Version": version.version,
+                        "Status": version.status,
+                        "Aliases": ", ".join(aliases) if aliases else "None",
+                        "Created": version.creation_timestamp
+                    })
+                
+                if version_data:
+                    st.dataframe(pd.DataFrame(version_data), use_container_width=True)
+    else:
+        st.info("No registered models found. Models will be registered when you run `python train.py`")
+except Exception as e:
+    st.warning(f"Could not load registered models: {e}")
+
+st.markdown("---")
+st.subheader("📈 Training Runs Comparison")
+
 # Get all experiments
 try:
     experiments = client.search_experiments()
     experiment_names = [exp.name for exp in experiments if exp.name != "Default"]
+    
+    # Debug info
+    st.sidebar.info(f"🔍 Debug Info:\n- Total experiments: {len(experiments)}\n- Non-default experiments: {len(experiment_names)}")
     
     if not experiment_names:
         st.info("ℹ️ **MLOps Dashboard** tracks models trained with MLflow experiment tracking.")
@@ -87,16 +124,32 @@ try:
     selected_experiment = st.selectbox("📁 Select Experiment", experiment_names, index=0)
     experiment = client.get_experiment_by_name(selected_experiment)
     
+    # Show experiment details
+    st.sidebar.success(f"📂 Experiment: {selected_experiment}\n- ID: {experiment.experiment_id if experiment else 'N/A'}")
+    
     if experiment:
-        # Get all runs
-        runs = client.search_runs(
-            experiment_ids=[experiment.experiment_id],
-            order_by=["metrics.test_accuracy DESC"],
-            max_results=20
-        )
+        # Get all runs with better error handling
+        try:
+            runs = client.search_runs(
+                experiment_ids=[experiment.experiment_id],
+                order_by=["start_time DESC"],  # Changed from metrics.test_accuracy to avoid missing metric errors
+                max_results=50
+            )
+            
+            st.sidebar.info(f"📊 Found {len(runs)} run(s)")
+            
+        except Exception as e:
+            st.error(f"Error searching runs: {e}")
+            runs = []
         
         if not runs:
-            st.info("ℹ️ No model runs found in this experiment. Train a model first!")
+            st.warning("⚠️ No model runs found in this experiment.")
+            st.info("""
+            **To populate this dashboard:**
+            1. Run `python train.py` to train and log a model
+            2. The model will appear here automatically
+            3. Train multiple times with different settings to compare
+            """)
             st.stop()
         
         # Create comparison dataframe

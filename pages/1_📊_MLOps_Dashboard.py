@@ -168,14 +168,24 @@ try:
             f1 = metrics.get('test_f1') or metrics.get('f1', 0)
             roc_auc = metrics.get('test_roc_auc') or metrics.get('roc_auc', 0)
             
-            # Check if run has all metrics
-            has_all_metrics = all([
-                'test_accuracy' in metrics or 'accuracy' in metrics,
-                'test_precision' in metrics or 'precision' in metrics,
-                'test_recall' in metrics or 'recall' in metrics,
-                'test_f1' in metrics or 'f1' in metrics,
-                'test_roc_auc' in metrics or 'roc_auc' in metrics
+            # Check if run has all metrics (either all test_* metrics OR all non-prefixed metrics)
+            has_new_metrics = all([
+                'test_accuracy' in metrics,
+                'test_precision' in metrics,
+                'test_recall' in metrics,
+                'test_f1' in metrics,
+                'test_roc_auc' in metrics
             ])
+            
+            has_old_metrics = all([
+                'accuracy' in metrics,
+                'precision' in metrics,
+                'recall' in metrics,
+                'f1' in metrics,
+                'roc_auc' in metrics
+            ])
+            
+            has_all_metrics = has_new_metrics or has_old_metrics
             
             if has_all_metrics:
                 complete_runs += 1
@@ -200,6 +210,19 @@ try:
             })
         
         df = pd.DataFrame(comparison_data)
+        
+        # Debug: Show what we found
+        st.sidebar.markdown("### 🔍 Debug Info")
+        st.sidebar.write(f"Total runs retrieved: {len(runs)}")
+        st.sidebar.write(f"DataFrame rows: {len(df)}")
+        st.sidebar.write(f"Complete runs: {complete_runs}")
+        st.sidebar.write(f"Incomplete runs: {incomplete_runs}")
+        
+        if len(runs) > 0:
+            st.sidebar.write("### Latest run metrics:")
+            latest_metrics = runs[0].data.metrics
+            for k, v in latest_metrics.items():
+                st.sidebar.write(f"  - {k}: {v:.4f}")
         
         # Add debugging info with quality metrics
         if incomplete_runs > 0:

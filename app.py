@@ -371,7 +371,6 @@ def generate_simple_explanation(customer_data, prediction, probability, top_risk
         return stay_summary
 
 
-@st.cache_data # Cache the AI generation
 def generate_retention_strategy(customer_data, prediction, probability, top_factors):
     """Generate personalized retention strategy using Google Gemini."""
     

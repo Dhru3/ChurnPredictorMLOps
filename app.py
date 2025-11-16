@@ -12,8 +12,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shap
 import streamlit as st
-from groq import Groq
-
+import google.generativeai as genai
 
 # Import prediction logging from monitoring dashboard
 try:
@@ -376,55 +375,32 @@ def generate_simple_explanation(customer_data, prediction, probability, top_risk
 
 @st.cache_data # Cache the AI generation
 def generate_retention_strategy(customer_data, prediction, probability, top_factors):
-    """Generate personalized retention strategy using Groq's Llama 3.1 8B."""
+    """Generate personalized retention strategy using Google Gemini."""
     
-    # 1. Load API key from Streamlit secrets ONLY
-    if "groq_api_key" not in st.secrets:
-        st.error("❌ Groq API key not found in Streamlit Cloud secrets!")
+    # 1. Load API key from Streamlit secrets
+    if "google_api_key" not in st.secrets:
+        st.error("❌ Google AI API key not found in Streamlit Cloud secrets!")
         st.info("""
         **To fix this:**
-        1. Go to your Streamlit Cloud app settings
-        2. Add a secret: `groq_api_key = "your_api_key_here"`
+        1. Go to Google AI Studio and get an API key.
+        2. Add it to your Streamlit Cloud app secrets as: google_api_key = "your_api_key_here"
         3. Reboot your app
         """)
         return None
     
-    api_key = st.secrets["groq_api_key"]
+    api_key = st.secrets["google_api_key"]
     
     try:
-        # --- The Definitive Streamlit Cloud Proxy Fix ---
+        # 2. Configure the Gemini client
+        genai.configure(api_key=api_key)
         
-        # 2. Add required imports at the top of this function
-        import os
-        import httpx
-
-        # 3. Nuke all proxy environment variables (Belt)
-        os.environ.pop('HTTP_PROXY', None)
-        os.environ.pop('HTTPS_PROXY', None)
-        os.environ.pop('http_proxy', None)
-        os.environ.pop('https_proxy', None)
-        os.environ.pop('ALL_PROXY', None)
-        os.environ.pop('all_proxy', None)
-        os.environ.pop('NO_PROXY', None)
-        os.environ.pop('no_proxy', None)
-
-        # 4. Create a custom client that EXPLICITLY ignores proxies (Suspenders)
-        http_client = httpx.Client(
-            proxies={},
-            trust_env=False
-        )
-
-        # 5. Force Groq to use OUR clean client
-        client = Groq(
-            api_key=api_key,
-            http_client=http_client  # <--- This is the most critical line
-        )
+        # 3. Initialize the model (gemini-1.5-flash is fast and powerful)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        st.toast("Groq client initialized successfully!", icon="✅")
+        st.toast("Gemini client initialized successfully!", icon="✅")
         
-        # --- End of Fix ---
+        # --- Build the same prompt we used before ---
         
-        # Build context about the customer
         risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"
         tenure = customer_data['tenure']
         monthly_charges = customer_data['MonthlyCharges']
@@ -447,43 +423,49 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
             offer = "15% loyalty discount + priority customer service"
         
         prompt = f"""You are writing a concise, professional customer retention email on behalf of a telecommunications company.
-    CUSTOMER PROFILE:
-    - Segment: {segment}
-    - Churn Risk: {risk_level} ({probability:.1%} probability of leaving)
-    - Tenure: {tenure} months with us
-    - Monthly Charges: ${monthly_charges:.2f}
-    TOP RISK FACTORS:
-    {chr(10).join(f"- {factor}" for factor in top_factors[:3])}
-    PERSONALIZED OFFER: {offer}
-    TASK: Write a SHORT, professional email (150-180 words MAX) with this structure:
-    Subject: Special Offer Just for You
-    Dear Valued Customer,
-    [ONE short paragraph: Thank them for {tenure} months with us. Mention you noticed some concerns about (mention 1-2 risk factors briefly).]
-    [ONE short paragraph: Present the EXACT offer: {offer}. Say it's exclusive and valid for 14 days only.]
-    [ONE SHORT line: To claim: Call 1-800-STAY-NOW or reply to this email.]
-    Best regards,
-    Customer Retention Team
-    retention@telcocare.com
-    ---
-    IMPORTANT: Keep it SHORT and easy to read. Maximum 180 words total. Use simple, warm language. No fluff.
-    """
 
-        response = client.chat.completions.create(
-            model="llama3-8b-8192", # Use llama3-8b, it's faster
-            messages=[
-                {"role": "system", "content": "You are a customer retention specialist. Write SHORT, concise emails (150-180 words max) that are warm and professional."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=350
-        )
+CUSTOMER PROFILE:
+- Segment: {segment}
+- Churn Risk: {risk_level} ({probability:.1%} probability of leaving)
+- Tenure: {tenure} months with us
+- Monthly Charges: ${monthly_charges:.2f}
+
+TOP RISK FACTORS:
+{chr(10).join(f"- {factor}" for factor in top_factors[:3])}
+
+PERSONALIZED OFFER: {offer}
+
+TASK: Write a SHORT, professional email (150-180 words MAX) with this structure:
+
+Subject: Special Offer Just for You
+
+Dear Valued Customer,
+
+[ONE short paragraph: Thank them for {tenure} months with us. Mention you noticed some concerns about (mention 1-2 risk factors briefly).]
+
+[ONE short paragraph: Present the EXACT offer: {offer}. Say it's exclusive and valid for 14 days only.]
+
+[ONE SHORT line: To claim: Call 1-800-STAY-NOW or reply to this email.]
+
+Best regards,
+Customer Retention Team
+retention@telcocare.com
+
+---
+
+IMPORTANT: Keep it SHORT and easy to read. Maximum 180 words total. Use simple, warm language. No fluff.
+"""
         
-        return response.choices[0].message.content
+        # 4. Generate the content
+        response = model.generate_content(prompt)
+        
+        # 5. Return the text
+        return response.text
         
     except Exception as e:
-        st.error(f"Error generating retention strategy: {str(e)}")
-        if "Authentication" in str(e):
-             st.error("Authentication failed. Check if your Groq API key in st.secrets is correct and has credits.")
+        st.error(f"Error generating retention strategy with Gemini: {str(e)}")
+        if "API key" in str(e):
+             st.error("Authentication failed. Check if your Google API key in st.secrets is correct.")
         return None
 
 # def generate_retention_strategy(customer_data, prediction, probability, top_factors):

@@ -5,7 +5,6 @@ scikit-learn==1.5.2
 streamlit==1.39.0
 shap==0.45.0
 plotly==5.24.1
-groq==0.11.0
 httpx
 joblib
 python-dotenv==1.0.1
@@ -15,3 +14,4 @@ matplotlib>=3.7.0
 statsmodels>=0.14.0
 pyarrow<16,>=4.0.0
 rich<14,>=10.14.0
+google-generativeai

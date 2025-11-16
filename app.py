@@ -459,17 +459,19 @@ def generate_simple_explanation(customer_data, prediction, probability, top_risk
 def generate_retention_strategy(customer_data, prediction, probability, top_factors):
     """Generate personalized retention strategy using Groq's Llama 3.1 8B."""
     # Check if GROQ_API_KEY exists in st.secrets (Streamlit Cloud)
-    if "GROQ_API_KEY" not in st.secrets:
+    try:
+        api_key = st.secrets["GROQ_API_KEY"]
+    except (KeyError, FileNotFoundError, AttributeError):
         # Fallback to environment variable (local development)
         api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            st.warning("⚠️ Groq API key not found. Add GROQ_API_KEY to Streamlit Cloud secrets or .env file to enable AI-powered retention strategies.")
-            return None
-    else:
-        api_key = st.secrets["GROQ_API_KEY"]
+    
+    if not api_key:
+        st.warning("⚠️ Groq API key not found. Add GROQ_API_KEY to Streamlit Cloud secrets or .env file to enable AI-powered retention strategies.")
+        return None
     
     try:
-        # Initialize Groq client
+        # Initialize Groq client (compatible with groq 0.9.0)
+        # Only pass api_key parameter, no other kwargs
         client = Groq(api_key=api_key)
         
         # Build context about the customer

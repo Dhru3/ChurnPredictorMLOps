@@ -9,14 +9,15 @@ venv/
 .venv/
 ENV/
 
-# MLflow
-mlruns/
-mlflow.db
+# MLflow (commented out to deploy model to Streamlit Cloud)
+# mlruns/
+# mlflow.db
 mlflow.db-wal
 mlflow.db-shm
 
 # Environment variables
 .env
+.ENV
 
 # IDE
 .vscode/

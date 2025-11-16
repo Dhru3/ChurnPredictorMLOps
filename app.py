@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import shap
 import streamlit as st
 from groq import Groq
-st.error("--- THIS IS MY NEWEST CODE - v5 ---")
+
 
 # Import prediction logging from monitoring dashboard
 try:
@@ -31,7 +31,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
+st.error("--- THIS IS MY NEWEST CODE - v5 ---")
 # Custom CSS for stunning styling
 st.markdown("""
     <style>

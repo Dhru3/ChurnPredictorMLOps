@@ -396,40 +396,26 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
     try:
         # Disable proxy detection for Groq client on Streamlit Cloud
         # This fixes the "unexpected keyword argument 'proxies'" error
-        import httpx
         import os
         
         st.write("🔧 Setting up Groq client...")
         
-        # Disable all proxy environment variables
+        # Disable all proxy environment variables BEFORE importing anything else
         os.environ.pop('HTTP_PROXY', None)
         os.environ.pop('HTTPS_PROXY', None)
         os.environ.pop('http_proxy', None)
         os.environ.pop('https_proxy', None)
+        os.environ.pop('ALL_PROXY', None)
+        os.environ.pop('all_proxy', None)
+        os.environ.pop('NO_PROXY', None)
+        os.environ.pop('no_proxy', None)
         
         st.write("✅ Proxy env vars cleared")
         
-        # Create custom HTTP client with explicit no-proxy configuration
-        http_client = httpx.Client(
-            proxies={},  # Empty dict instead of None
-            trust_env=False  # Don't trust environment proxy settings
-        )
-        
-        st.write("✅ HTTP client created")
-        
-        # Initialize Groq client with custom HTTP client
-        # NOTE: Some Groq versions don't support http_client parameter
-        # Try without it first
-        try:
-            client = Groq(api_key=api_key)
-            st.write("✅ Groq client initialized (without custom http_client)")
-        except TypeError as e:
-            if "http_client" in str(e):
-                # Try with http_client parameter
-                client = Groq(api_key=api_key, http_client=http_client)
-                st.write("✅ Groq client initialized (with custom http_client)")
-            else:
-                raise
+        # Initialize Groq client WITHOUT custom http_client
+        # Let it create its own client with no proxy env vars present
+        client = Groq(api_key=api_key)
+        st.write("✅ Groq client initialized successfully!")
         
         # Build context about the customer
         risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"

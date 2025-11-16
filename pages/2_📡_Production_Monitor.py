@@ -13,14 +13,14 @@ import json
 from pathlib import Path
 import sys
 
-st.set_page_config(page_title="Production Monitor", page_icon="📡", layout="wide")
-
 # Setup paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-LOG_FILE = PROJECT_ROOT / "prediction_logs.jsonl"
-
-# Add parent directory to path for imports
 sys.path.append(str(PROJECT_ROOT))
+
+# Import logger utility
+from utils.prediction_logger import load_prediction_logs, LOG_FILE
+
+st.set_page_config(page_title="Production Monitor", page_icon="📡", layout="wide")
 
 # Custom CSS
 st.markdown("""
@@ -52,39 +52,6 @@ st.markdown("""
 st.title("📡 Production Monitoring Dashboard")
 st.markdown("**Real-time monitoring of model predictions in production**")
 st.markdown("---")
-
-# Helper functions
-def load_prediction_logs():
-    """Load prediction logs from JSONL file"""
-    logs = []
-    if LOG_FILE.exists():
-        try:
-            with open(LOG_FILE, 'r') as f:
-                for line in f:
-                    if line.strip():
-                        logs.append(json.loads(line))
-        except Exception as e:
-            st.error(f"Error loading logs: {e}")
-    return pd.DataFrame(logs) if logs else pd.DataFrame()
-
-def save_prediction_log(customer_id, features, prediction, probability, shap_values=None):
-    """Save a prediction to the log file (call this from app.py)"""
-    log_entry = {
-        "timestamp": datetime.now().isoformat(),
-        "customer_id": customer_id,
-        "prediction": prediction,
-        "probability": float(probability),
-        "features": features,
-        "shap_top_3": shap_values[:3].tolist() if shap_values is not None else []
-    }
-    
-    # Create file if it doesn't exist
-    if not LOG_FILE.exists():
-        LOG_FILE.touch()
-    
-    # Append to file
-    with open(LOG_FILE, 'a') as f:
-        f.write(json.dumps(log_entry) + '\n')
 
 # Load data
 df_logs = load_prediction_logs()

@@ -50,7 +50,38 @@ try:
     experiment_names = [exp.name for exp in experiments if exp.name != "Default"]
     
     if not experiment_names:
-        st.warning("⚠️ No experiments found. Run `train.py` first to create experiments.")
+        st.info("ℹ️ **MLOps Dashboard** tracks models trained with MLflow experiment tracking.")
+        st.markdown("""
+        ### 🎯 What is this dashboard?
+        
+        This dashboard compares **multiple model training runs** side-by-side to help you:
+        - Compare different hyperparameters
+        - Track model performance over time
+        - Select the best "champion" model
+        
+        ### 📊 Current Status
+        
+        **Your current model (`churn_pipeline.pkl`) is working perfectly!** ✅
+        
+        This dashboard is for **advanced MLOps workflows** where you:
+        1. Train multiple models with different hyperparameters
+        2. Log each training run to MLflow
+        3. Compare and select the best model
+        
+        ### 🚀 To use this dashboard:
+        
+        Run the training script with MLflow tracking enabled:
+        ```bash
+        python train.py
+        ```
+        
+        This will create experiment runs that appear here for comparison.
+        
+        ---
+        
+        **Note:** Since you have one production model that's working well, this dashboard is optional for now.
+        It's useful when you want to experiment with different model configurations or retrain regularly.
+        """)
         st.stop()
     
     selected_experiment = st.selectbox("📁 Select Experiment", experiment_names, index=0)

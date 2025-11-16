@@ -12,13 +12,13 @@ import plotly.graph_objects as go
 import shap
 import streamlit as st
 
-# Import prediction logging from monitoring dashboard
+# Import prediction logging utility
 try:
-    from pages.production_monitor import save_prediction_log
+    from utils.prediction_logger import save_prediction_log
 except (ImportError, ModuleNotFoundError):
     # Fallback if module not available
     def save_prediction_log(*args, **kwargs):
-        """Dummy function when production_monitor is not available"""
+        """Dummy function when logger is not available"""
         pass
 
 # Page configuration

@@ -5,7 +5,8 @@ Combines MLOps (MLflow model) with Generative AI for customer retention
 """
 import joblib
 from pathlib import Path
-
+import os
+import httpx
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -372,9 +373,11 @@ def generate_simple_explanation(customer_data, prediction, probability, top_risk
         return stay_summary
 
 
+@st.cache_data # Cache the AI generation
 def generate_retention_strategy(customer_data, prediction, probability, top_factors):
     """Generate personalized retention strategy using Groq's Llama 3.1 8B."""
-    # Load API key from Streamlit secrets ONLY (no .env fallback)
+    
+    # 1. Load API key from Streamlit secrets ONLY
     if "groq_api_key" not in st.secrets:
         st.error("❌ Groq API key not found in Streamlit Cloud secrets!")
         st.info("""
@@ -390,11 +393,11 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
     try:
         # --- The Definitive Streamlit Cloud Proxy Fix ---
         
-        # 1. Add required imports at the top of this function
+        # 2. Add required imports at the top of this function
         import os
         import httpx
 
-        # 2. Nuke all proxy environment variables (Belt)
+        # 3. Nuke all proxy environment variables (Belt)
         os.environ.pop('HTTP_PROXY', None)
         os.environ.pop('HTTPS_PROXY', None)
         os.environ.pop('http_proxy', None)
@@ -404,15 +407,13 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
         os.environ.pop('NO_PROXY', None)
         os.environ.pop('no_proxy', None)
 
-        # 3. Create a custom client that EXPLICITLY ignores proxies (Suspenders)
-        #    proxies={}: Sets no proxies
-        #    trust_env=False: Tells httpx to NOT look at env vars
+        # 4. Create a custom client that EXPLICITLY ignores proxies (Suspenders)
         http_client = httpx.Client(
             proxies={},
             trust_env=False
         )
 
-        # 4. Force Groq to use OUR clean client
+        # 5. Force Groq to use OUR clean client
         client = Groq(
             api_key=api_key,
             http_client=http_client  # <--- This is the most critical line
@@ -427,18 +428,13 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
         tenure = customer_data['tenure']
         monthly_charges = customer_data['MonthlyCharges']
         
-        # Determine customer segment for personalized strategy
         if tenure < 12:
             segment = "New Customer (Under 1 Year)"
-            strategy_focus = "Welcome aboard! Focus on onboarding support and early value demonstration"
         elif tenure >= 12 and tenure < 36:
             segment = "Growing Customer (1-3 Years)"
-            strategy_focus = "Strengthen relationship with loyalty rewards and service upgrades"
         else:
             segment = "Loyal Long-Term Customer (3+ Years)"
-            strategy_focus = "VIP treatment, exclusive offers, and deep appreciation for loyalty"
         
-        # Determine offer based on risk level and charges
         if probability > 0.7:
             if monthly_charges > 70:
                 offer = "30% discount for 6 months + free premium support"
@@ -450,50 +446,32 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
             offer = "15% loyalty discount + priority customer service"
         
         prompt = f"""You are writing a concise, professional customer retention email on behalf of a telecommunications company.
-
-CUSTOMER PROFILE:
-- Segment: {segment}
-- Churn Risk: {risk_level} ({probability:.1%} probability of leaving)
-- Tenure: {tenure} months with us
-- Monthly Charges: ${monthly_charges:.2f}
-
-TOP RISK FACTORS:
-{chr(10).join(f"- {factor}" for factor in top_factors[:3])}
-
-PERSONALIZED OFFER: {offer}
-
-TASK: Write a SHORT, professional email (150-180 words MAX) with this structure:
-
-Subject: Special Offer Just for You
-
-Dear Valued Customer,
-
-[ONE short paragraph: Thank them for {tenure} months with us. Mention you noticed some concerns about (mention 1-2 risk factors briefly).]
-
-[ONE short paragraph: Present the EXACT offer: {offer}. Say it's exclusive and valid for 14 days only.]
-
-[ONE SHORT line: To claim: Call 1-800-STAY-NOW or reply to this email.]
-
-Best regards,
-Customer Retention Team
-retention@telcocare.com
-
----
-
-IMPORTANT: Keep it SHORT and easy to read. Maximum 180 words total. Use simple, warm language. No fluff.
-"""
+    CUSTOMER PROFILE:
+    - Segment: {segment}
+    - Churn Risk: {risk_level} ({probability:.1%} probability of leaving)
+    - Tenure: {tenure} months with us
+    - Monthly Charges: ${monthly_charges:.2f}
+    TOP RISK FACTORS:
+    {chr(10).join(f"- {factor}" for factor in top_factors[:3])}
+    PERSONALIZED OFFER: {offer}
+    TASK: Write a SHORT, professional email (150-180 words MAX) with this structure:
+    Subject: Special Offer Just for You
+    Dear Valued Customer,
+    [ONE short paragraph: Thank them for {tenure} months with us. Mention you noticed some concerns about (mention 1-2 risk factors briefly).]
+    [ONE short paragraph: Present the EXACT offer: {offer}. Say it's exclusive and valid for 14 days only.]
+    [ONE SHORT line: To claim: Call 1-800-STAY-NOW or reply to this email.]
+    Best regards,
+    Customer Retention Team
+    retention@telcocare.com
+    ---
+    IMPORTANT: Keep it SHORT and easy to read. Maximum 180 words total. Use simple, warm language. No fluff.
+    """
 
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama3-8b-8192", # Use llama3-8b, it's faster
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are a customer retention specialist. Write SHORT, concise emails (150-180 words max) that are warm and professional."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "system", "content": "You are a customer retention specialist. Write SHORT, concise emails (150-180 words max) that are warm and professional."},
+                {"role": "user", "content": prompt}
             ],
             temperature=0.7,
             max_tokens=350
@@ -503,7 +481,142 @@ IMPORTANT: Keep it SHORT and easy to read. Maximum 180 words total. Use simple, 
         
     except Exception as e:
         st.error(f"Error generating retention strategy: {str(e)}")
+        if "Authentication" in str(e):
+             st.error("Authentication failed. Check if your Groq API key in st.secrets is correct and has credits.")
         return None
+
+# def generate_retention_strategy(customer_data, prediction, probability, top_factors):
+#     """Generate personalized retention strategy using Groq's Llama 3.1 8B."""
+#     # Load API key from Streamlit secrets ONLY (no .env fallback)
+#     if "groq_api_key" not in st.secrets:
+#         st.error("❌ Groq API key not found in Streamlit Cloud secrets!")
+#         st.info("""
+#         **To fix this:**
+#         1. Go to your Streamlit Cloud app settings
+#         2. Add a secret: `groq_api_key = "your_api_key_here"`
+#         3. Reboot your app
+#         """)
+#         return None
+    
+#     api_key = st.secrets["groq_api_key"]
+    
+#     try:
+#         # --- The Definitive Streamlit Cloud Proxy Fix ---
+        
+#         # 1. Add required imports at the top of this function
+#         import os
+#         import httpx
+
+#         # 2. Nuke all proxy environment variables (Belt)
+#         os.environ.pop('HTTP_PROXY', None)
+#         os.environ.pop('HTTPS_PROXY', None)
+#         os.environ.pop('http_proxy', None)
+#         os.environ.pop('https_proxy', None)
+#         os.environ.pop('ALL_PROXY', None)
+#         os.environ.pop('all_proxy', None)
+#         os.environ.pop('NO_PROXY', None)
+#         os.environ.pop('no_proxy', None)
+
+#         # 3. Create a custom client that EXPLICITLY ignores proxies (Suspenders)
+#         #    proxies={}: Sets no proxies
+#         #    trust_env=False: Tells httpx to NOT look at env vars
+#         http_client = httpx.Client(
+#             proxies={},
+#             trust_env=False
+#         )
+
+#         # 4. Force Groq to use OUR clean client
+#         client = Groq(
+#             api_key=api_key,
+#             http_client=http_client  # <--- This is the most critical line
+#         )
+        
+#         st.toast("Groq client initialized successfully!", icon="✅")
+        
+#         # --- End of Fix ---
+        
+#         # Build context about the customer
+#         risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"
+#         tenure = customer_data['tenure']
+#         monthly_charges = customer_data['MonthlyCharges']
+        
+#         # Determine customer segment for personalized strategy
+#         if tenure < 12:
+#             segment = "New Customer (Under 1 Year)"
+#             strategy_focus = "Welcome aboard! Focus on onboarding support and early value demonstration"
+#         elif tenure >= 12 and tenure < 36:
+#             segment = "Growing Customer (1-3 Years)"
+#             strategy_focus = "Strengthen relationship with loyalty rewards and service upgrades"
+#         else:
+#             segment = "Loyal Long-Term Customer (3+ Years)"
+#             strategy_focus = "VIP treatment, exclusive offers, and deep appreciation for loyalty"
+        
+#         # Determine offer based on risk level and charges
+#         if probability > 0.7:
+#             if monthly_charges > 70:
+#                 offer = "30% discount for 6 months + free premium support"
+#             else:
+#                 offer = "3 months at 50% off + free service upgrade"
+#         elif probability > 0.4:
+#             offer = "20% discount for 3 months + complimentary tech support package"
+#         else:
+#             offer = "15% loyalty discount + priority customer service"
+        
+#         prompt = f"""You are writing a concise, professional customer retention email on behalf of a telecommunications company.
+
+# CUSTOMER PROFILE:
+# - Segment: {segment}
+# - Churn Risk: {risk_level} ({probability:.1%} probability of leaving)
+# - Tenure: {tenure} months with us
+# - Monthly Charges: ${monthly_charges:.2f}
+
+# TOP RISK FACTORS:
+# {chr(10).join(f"- {factor}" for factor in top_factors[:3])}
+
+# PERSONALIZED OFFER: {offer}
+
+# TASK: Write a SHORT, professional email (150-180 words MAX) with this structure:
+
+# Subject: Special Offer Just for You
+
+# Dear Valued Customer,
+
+# [ONE short paragraph: Thank them for {tenure} months with us. Mention you noticed some concerns about (mention 1-2 risk factors briefly).]
+
+# [ONE short paragraph: Present the EXACT offer: {offer}. Say it's exclusive and valid for 14 days only.]
+
+# [ONE SHORT line: To claim: Call 1-800-STAY-NOW or reply to this email.]
+
+# Best regards,
+# Customer Retention Team
+# retention@telcocare.com
+
+# ---
+
+# IMPORTANT: Keep it SHORT and easy to read. Maximum 180 words total. Use simple, warm language. No fluff.
+# """
+
+#         response = client.chat.completions.create(
+#             model="llama-3.1-8b-instant",
+#             messages=[
+#                 {
+#                     "role": "system",
+#                     "content": "You are a customer retention specialist. Write SHORT, concise emails (150-180 words max) that are warm and professional."
+#                 },
+#                 {
+#                     "role": "user",
+#                     "content": prompt
+#                 }
+#             ],
+#             temperature=0.7,
+#             max_tokens=350
+#         )
+        
+#         return response.choices[0].message.content
+        
+#     except Exception as e:
+#         st.error(f"Error generating retention strategy: {str(e)}")
+#         return None
 
 def display_prediction_results(prediction, probability):
     """Display prediction results with visual indicators."""

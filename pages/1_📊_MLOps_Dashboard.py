@@ -234,7 +234,7 @@ try:
         
         # Key Metrics Section
         st.subheader("🎯 Key Performance Indicators")
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
         
         with col1:
             st.metric("🏆 Total Models", len(df), help="Total models trained")
@@ -246,6 +246,8 @@ try:
             st.metric("🔍 Best Recall", f"{df['Recall'].max():.1%}", help="Highest recall for churn class")
         with col5:
             st.metric("⚡ Best F1", f"{df['F1-Score'].max():.1%}", help="Highest F1-score")
+        with col6:
+            st.metric("📈 Best ROC-AUC", f"{df['ROC-AUC'].max():.1%}", help="Highest ROC-AUC score")
         
         st.markdown("---")
         
@@ -272,10 +274,10 @@ try:
         
         st.markdown("*Showing detailed metrics for all training runs*")
         
-        # Format the dataframe for better display
+        # Format the dataframe for better display (but keep original df for charts)
         df_display = df.copy()
         
-        # Convert metrics to percentages for display
+        # Convert metrics to percentages for display ONLY in the table
         for col in ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC']:
             df_display[col] = df_display[col].apply(lambda x: f"{x:.2%}" if x > 0 else "0.00%")
         
@@ -296,6 +298,7 @@ try:
         # Performance Evolution
         st.subheader("📈 Model Performance Evolution Over Time")
         
+        # Use the original df with numeric values for plotting
         fig = go.Figure()
         
         fig.add_trace(go.Scatter(
@@ -334,10 +337,20 @@ try:
             marker=dict(size=10)
         ))
         
+        fig.add_trace(go.Scatter(
+            x=df['Date'], 
+            y=df['ROC-AUC'], 
+            mode='lines+markers',
+            name='ROC-AUC',
+            line=dict(color='#fa709a', width=3),
+            marker=dict(size=10)
+        ))
+        
         fig.update_layout(
             title="Model Metrics Over Time",
             xaxis_title="Training Date",
             yaxis_title="Score",
+            yaxis=dict(range=[0, 1]),  # Set y-axis from 0 to 1 for better visualization
             hovermode='x unified',
             height=500,
             template="plotly_white"
@@ -510,6 +523,7 @@ try:
             st.metric("Precision", f"{best_run['Precision']:.3f}")
             st.metric("Recall", f"{best_run['Recall']:.3f}")
             st.metric("F1-Score", f"{best_run['F1-Score']:.3f}")
+            st.metric("ROC-AUC", f"{best_run['ROC-AUC']:.3f}")
         
         with col2:
             st.markdown("### ⚙️ Hyperparameters")

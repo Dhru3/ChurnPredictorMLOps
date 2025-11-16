@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Hybrid AI Churn-Bot: Mission Control Dashboard
-Combines MLOps (MLflow model) with Generative AI for customer retention
+Combines MLOps (MLflow model) with Explainable AI for customer retention
 """
 import joblib
 from pathlib import Path
@@ -11,7 +11,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import shap
 import streamlit as st
-import google.generativeai as genai
 
 # Import prediction logging from monitoring dashboard
 try:
@@ -371,232 +370,79 @@ def generate_simple_explanation(customer_data, prediction, probability, top_risk
         return stay_summary
 
 
-def generate_retention_strategy(customer_data, prediction, probability, top_factors):
-    """Generate personalized retention strategy using Google Gemini."""
+def get_retention_strategy(customer_data, prediction, probability, top_factors):
+    """Generate static retention strategy recommendations based on customer data."""
     
-    # 1. Load API key from Streamlit secrets
-    if "google_api_key" not in st.secrets:
-        st.error("❌ Google AI API key not found in Streamlit Cloud secrets!")
-        st.info("""
-        **To fix this:**
-        1. Go to Google AI Studio and get an API key.
-        2. Add it to your Streamlit Cloud app secrets as: google_api_key = "your_api_key_here"
-        3. Reboot your app
-        """)
-        return None
+    risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"
+    tenure = customer_data['tenure']
+    monthly_charges = customer_data['MonthlyCharges']
     
-    api_key = st.secrets["google_api_key"]
+    # Determine customer segment
+    if tenure < 12:
+        segment = "New Customer (Under 1 Year)"
+        segment_note = "Focus on early value demonstration and onboarding support"
+    elif tenure >= 12 and tenure < 36:
+        segment = "Growing Customer (1-3 Years)"
+        segment_note = "Strengthen relationship with loyalty rewards"
+    else:
+        segment = "Loyal Long-Term Customer (3+ Years)"
+        segment_note = "VIP treatment with exclusive appreciation offers"
     
-    try:
-        # 2. Configure the Gemini client
-        genai.configure(api_key=api_key)
-        
-        # 3. Initialize the model
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        st.toast("Gemini client initialized successfully!", icon="✅")
-        
-        # --- Build the same prompt we used before ---
-        
-        risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"
-        tenure = customer_data['tenure']
-        monthly_charges = customer_data['MonthlyCharges']
-        
-        if tenure < 12:
-            segment = "New Customer (Under 1 Year)"
-        elif tenure >= 12 and tenure < 36:
-            segment = "Growing Customer (1-3 Years)"
+    # Determine personalized offer based on risk and charges
+    if probability > 0.7:
+        if monthly_charges > 70:
+            offer = "30% discount for 6 months + free premium support"
+            urgency = "Immediate action required - Contact within 48 hours"
         else:
-            segment = "Loyal Long-Term Customer (3+ Years)"
-        
-        if probability > 0.7:
-            if monthly_charges > 70:
-                offer = "30% discount for 6 months + free premium support"
-            else:
-                offer = "3 months at 50% off + free service upgrade"
-        elif probability > 0.4:
-            offer = "20% discount for 3 months + complimentary tech support package"
+            offer = "3 months at 50% off + free service upgrade"
+            urgency = "Immediate action required - Contact within 48 hours"
+    elif probability > 0.4:
+        offer = "20% discount for 3 months + complimentary tech support"
+        urgency = "High priority - Contact within 1 week"
+    else:
+        offer = "15% loyalty discount + priority customer service"
+        urgency = "Standard follow-up - Contact within 2 weeks"
+    
+    # Generate talking points based on top risk factors
+    talking_points = []
+    for factor in top_factors[:3]:
+        factor_lower = factor.lower()
+        if 'contract' in factor_lower:
+            talking_points.append("Discuss flexible contract options and commitment benefits")
+        elif 'charges' in factor_lower or 'price' in factor_lower:
+            talking_points.append("Review current plan and identify cost-saving opportunities")
+        elif 'support' in factor_lower or 'service' in factor_lower:
+            talking_points.append("Highlight improved support channels and response times")
+        elif 'internet' in factor_lower or 'fiber' in factor_lower:
+            talking_points.append("Showcase latest internet speed upgrades and reliability improvements")
+        elif 'payment' in factor_lower:
+            talking_points.append("Offer convenient payment options and autopay discounts")
         else:
-            offer = "15% loyalty discount + priority customer service"
-        
-        prompt = f"""You are writing a concise, professional customer retention email on behalf of a telecommunications company.
-
-CUSTOMER PROFILE:
-- Segment: {segment}
-- Churn Risk: {risk_level} ({probability:.1%} probability of leaving)
-- Tenure: {tenure} months with us
-- Monthly Charges: ${monthly_charges:.2f}
-
-TOP RISK FACTORS:
-{chr(10).join(f"- {factor}" for factor in top_factors[:3])}
-
-PERSONALIZED OFFER: {offer}
-
-TASK: Write a SHORT, professional email (150-180 words MAX) with this structure:
-
-Subject: Special Offer Just for You
-
-Dear Valued Customer,
-
-[ONE short paragraph: Thank them for {tenure} months with us. Mention you noticed some concerns about (mention 1-2 risk factors briefly).]
-
-[ONE short paragraph: Present the EXACT offer: {offer}. Say it's exclusive and valid for 14 days only.]
-
-[ONE SHORT line: To claim: Call 1-800-STAY-NOW or reply to this email.]
-
-Best regards,
-Customer Retention Team
-retention@telcocare.com
-
----
-
-IMPORTANT: Keep it SHORT and easy to read. Maximum 180 words total. Use simple, warm language. No fluff.
-"""
-        
-        # 4. Generate the content
-        response = model.generate_content(prompt)
-        
-        # 5. Return the text
-        return response.text
-        
-    except Exception as e:
-        st.error(f"Error generating retention strategy with Gemini: {str(e)}")
-        if "API key" in str(e):
-             st.error("Authentication failed. Check if your Google API key in st.secrets is correct.")
-        return None
-
-# def generate_retention_strategy(customer_data, prediction, probability, top_factors):
-#     """Generate personalized retention strategy using Groq's Llama 3.1 8B."""
-#     # Load API key from Streamlit secrets ONLY (no .env fallback)
-#     if "groq_api_key" not in st.secrets:
-#         st.error("❌ Groq API key not found in Streamlit Cloud secrets!")
-#         st.info("""
-#         **To fix this:**
-#         1. Go to your Streamlit Cloud app settings
-#         2. Add a secret: `groq_api_key = "your_api_key_here"`
-#         3. Reboot your app
-#         """)
-#         return None
+            talking_points.append(f"Address concerns about {factor}")
     
-#     api_key = st.secrets["groq_api_key"]
+    # Determine contact method
+    if probability > 0.6:
+        contact_method = "Phone call"
+        contact_note = "Personal touch required - Schedule immediate call"
+    elif probability > 0.4:
+        contact_method = "Email + Phone follow-up"
+        contact_note = "Email first, then call if no response in 3 days"
+    else:
+        contact_method = "Email"
+        contact_note = "Professional email communication sufficient"
     
-#     try:
-#         # --- The Definitive Streamlit Cloud Proxy Fix ---
-        
-#         # 1. Add required imports at the top of this function
-#         import os
-#         import httpx
-
-#         # 2. Nuke all proxy environment variables (Belt)
-#         os.environ.pop('HTTP_PROXY', None)
-#         os.environ.pop('HTTPS_PROXY', None)
-#         os.environ.pop('http_proxy', None)
-#         os.environ.pop('https_proxy', None)
-#         os.environ.pop('ALL_PROXY', None)
-#         os.environ.pop('all_proxy', None)
-#         os.environ.pop('NO_PROXY', None)
-#         os.environ.pop('no_proxy', None)
-
-#         # 3. Create a custom client that EXPLICITLY ignores proxies (Suspenders)
-#         #    proxies={}: Sets no proxies
-#         #    trust_env=False: Tells httpx to NOT look at env vars
-#         http_client = httpx.Client(
-#             proxies={},
-#             trust_env=False
-#         )
-
-#         # 4. Force Groq to use OUR clean client
-#         client = Groq(
-#             api_key=api_key,
-#             http_client=http_client  # <--- This is the most critical line
-#         )
-        
-#         st.toast("Groq client initialized successfully!", icon="✅")
-        
-#         # --- End of Fix ---
-        
-#         # Build context about the customer
-#         risk_level = "HIGH RISK" if probability > 0.7 else "MODERATE RISK" if probability > 0.4 else "LOW RISK"
-#         tenure = customer_data['tenure']
-#         monthly_charges = customer_data['MonthlyCharges']
-        
-#         # Determine customer segment for personalized strategy
-#         if tenure < 12:
-#             segment = "New Customer (Under 1 Year)"
-#             strategy_focus = "Welcome aboard! Focus on onboarding support and early value demonstration"
-#         elif tenure >= 12 and tenure < 36:
-#             segment = "Growing Customer (1-3 Years)"
-#             strategy_focus = "Strengthen relationship with loyalty rewards and service upgrades"
-#         else:
-#             segment = "Loyal Long-Term Customer (3+ Years)"
-#             strategy_focus = "VIP treatment, exclusive offers, and deep appreciation for loyalty"
-        
-#         # Determine offer based on risk level and charges
-#         if probability > 0.7:
-#             if monthly_charges > 70:
-#                 offer = "30% discount for 6 months + free premium support"
-#             else:
-#                 offer = "3 months at 50% off + free service upgrade"
-#         elif probability > 0.4:
-#             offer = "20% discount for 3 months + complimentary tech support package"
-#         else:
-#             offer = "15% loyalty discount + priority customer service"
-        
-#         prompt = f"""You are writing a concise, professional customer retention email on behalf of a telecommunications company.
-
-# CUSTOMER PROFILE:
-# - Segment: {segment}
-# - Churn Risk: {risk_level} ({probability:.1%} probability of leaving)
-# - Tenure: {tenure} months with us
-# - Monthly Charges: ${monthly_charges:.2f}
-
-# TOP RISK FACTORS:
-# {chr(10).join(f"- {factor}" for factor in top_factors[:3])}
-
-# PERSONALIZED OFFER: {offer}
-
-# TASK: Write a SHORT, professional email (150-180 words MAX) with this structure:
-
-# Subject: Special Offer Just for You
-
-# Dear Valued Customer,
-
-# [ONE short paragraph: Thank them for {tenure} months with us. Mention you noticed some concerns about (mention 1-2 risk factors briefly).]
-
-# [ONE short paragraph: Present the EXACT offer: {offer}. Say it's exclusive and valid for 14 days only.]
-
-# [ONE SHORT line: To claim: Call 1-800-STAY-NOW or reply to this email.]
-
-# Best regards,
-# Customer Retention Team
-# retention@telcocare.com
-
-# ---
-
-# IMPORTANT: Keep it SHORT and easy to read. Maximum 180 words total. Use simple, warm language. No fluff.
-# """
-
-#         response = client.chat.completions.create(
-#             model="llama-3.1-8b-instant",
-#             messages=[
-#                 {
-#                     "role": "system",
-#                     "content": "You are a customer retention specialist. Write SHORT, concise emails (150-180 words max) that are warm and professional."
-#                 },
-#                 {
-#                     "role": "user",
-#                     "content": prompt
-#                 }
-#             ],
-#             temperature=0.7,
-#             max_tokens=350
-#         )
-        
-#         return response.choices[0].message.content
-        
-#     except Exception as e:
-#         st.error(f"Error generating retention strategy: {str(e)}")
-#         return None
+    return {
+        'segment': segment,
+        'segment_note': segment_note,
+        'risk_level': risk_level,
+        'offer': offer,
+        'urgency': urgency,
+        'talking_points': talking_points,
+        'contact_method': contact_method,
+        'contact_note': contact_note,
+        'tenure': tenure,
+        'monthly_charges': monthly_charges
+    }
 
 def display_prediction_results(prediction, probability):
     """Display prediction results with visual indicators."""
@@ -665,7 +511,7 @@ def main():
     """Main application logic."""
     # Header with animation
     st.markdown('<h1 class="main-header">🤖 Hybrid AI Churn-Bot: Mission Control</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">Combining Predictive AI + Explainable AI + Generative AI (Google Gemini)</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">Combining Predictive AI + Explainable AI</p>', unsafe_allow_html=True)
     st.markdown("---")
     
     # Load the model pipeline
@@ -674,7 +520,7 @@ def main():
     # Display model info with style
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.info("🚀 **Active Model**: v1.0 (churn_pipeline.pkl) | **Powered by**: Google Gemini 1.5 Flash")
+        st.info("🚀 **Active Model**: v1.0 (churn_pipeline.pkl) | **MLOps Stack**: MLflow + SHAP")
     
     # Sidebar input form
     customer_data = create_input_form()
@@ -688,11 +534,10 @@ def main():
         
         ### 🌟 This Is Not Just Another ML Model...
         
-        This is a **complete intelligent system** that combines **THREE different AI technologies**:
+        This is a **complete intelligent system** that combines **TWO powerful AI technologies**:
         
         - **🎯 Predictive AI**: MLflow-registered RandomForest model for churn prediction
-        - **🧠 Explainable AI**: SHAP analysis showing *why* customers churn
-        - **✨ Generative AI**: Google Gemini 1.5 Flash creating personalized retention emails
+        - **🧠 Explainable AI**: SHAP analysis showing *why* customers churn with actionable insights
         
         </div>
         
@@ -725,9 +570,9 @@ def main():
         with col2:
             st.metric("🔮 Predictions Made", "0", help="In this session")
         with col3:
-            st.metric("⚡ Avg Response Time", "<2s", help="Prediction + Explanation + AI Email")
+            st.metric("⚡ Avg Response Time", "<2s", help="Prediction + Explanation + Strategy")
         with col4:
-            st.metric("🤖 AI Model", "Gemini 1.5 Flash", help="Google AI-powered generation")
+            st.metric("📊 Model Type", "RandomForest", help="MLflow-registered model")
         
     else:
         # Make prediction
@@ -837,61 +682,101 @@ def main():
         
         st.markdown("---")
         
-        # Gen AI Retention Strategy (for churn cases) or appreciation (for stay cases)
+        # Retention Strategy Recommendations (for churn cases) or appreciation (for stay cases)
         if prediction == "Yes":
-            st.markdown("## ✉️ AI-Generated Retention Email")
-            st.markdown("### 💼 Professional Email Drafted by AI")
-            st.info("🤖 This email was personalized using Google Gemini 1.5 Flash based on customer segment, risk level, and specific pain points.")
+            st.markdown("## 📋 Recommended Retention Strategy")
+            st.markdown("### 🎯 Actionable Plan Based on Risk Analysis")
             
-            with st.spinner("✍️ Drafting personalized retention email..."):
-                email_content = generate_retention_strategy(
-                    customer_data, prediction, probability, top_risk_factors
-                )
+            # Get retention strategy recommendations
+            strategy = get_retention_strategy(
+                customer_data, prediction, probability, top_risk_factors
+            )
             
-            if email_content:
-                # Display email in a more professional format
-                st.markdown("""
-                    <style>
-                    .email-container {
-                        background: white;
-                        padding: 2rem;
-                        border-radius: 10px;
-                        border: 1px solid #ddd;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                        font-family: 'Arial', sans-serif;
-                        color: #333;
-                        line-height: 1.6;
-                        white-space: pre-wrap;
-                    }
-                    </style>
+            # Display strategy in organized cards
+            st.markdown("""
+                <style>
+                .strategy-card {
+                    background: white;
+                    padding: 1.5rem;
+                    border-radius: 10px;
+                    border-left: 4px solid #1f77b4;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    margin-bottom: 1rem;
+                }
+                .strategy-header {
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    color: #1f77b4;
+                    margin-bottom: 0.5rem;
+                }
+                .strategy-content {
+                    color: #333;
+                    line-height: 1.6;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+            
+            # Customer Profile
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown(f"""
+                <div class="strategy-card">
+                    <div class="strategy-header">👤 Customer Profile</div>
+                    <div class="strategy-content">
+                        <b>Segment:</b> {strategy['segment']}<br>
+                        <b>Tenure:</b> {strategy['tenure']} months<br>
+                        <b>Monthly Charges:</b> ${strategy['monthly_charges']:.2f}<br>
+                        <b>Risk Level:</b> {strategy['risk_level']}
+                    </div>
+                </div>
                 """, unsafe_allow_html=True)
-                
-                st.markdown(f'<div class="email-container">{email_content}</div>', unsafe_allow_html=True)
-                
-                # Action buttons
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.download_button(
-                        label="📥 Download Email",
-                        data=email_content,
-                        file_name=f"retention_email_tenure_{customer_data['tenure']}.txt",
-                        mime="text/plain",
-                        width="stretch"
-                    )
-                with col2:
-                    if st.button("📋 Copy to Clipboard", width="stretch"):
-                        st.success("✅ Email copied! (Use Ctrl+C manually)")
-                with col3:
-                    if st.button("📧 Send Email", width="stretch"):
-                        st.info("Email integration coming soon!")
-            else:
-                st.error("❌ Could not generate email. Please add your Google API key to Streamlit secrets.")
-                st.markdown("""
-                **To enable AI email generation:**
-                1. Get a free Google AI API key from https://aistudio.google.com/app/apikey
-                2. Add it to Streamlit Cloud secrets: `google_api_key = "your_key_here"`
-                3. Reboot your app
-                """)
+            
+            with col2:
+                st.markdown(f"""
+                <div class="strategy-card">
+                    <div class="strategy-header">⏰ Urgency & Contact</div>
+                    <div class="strategy-content">
+                        <b>{strategy['urgency']}</b><br>
+                        <b>Contact Method:</b> {strategy['contact_method']}<br>
+                        <i>{strategy['contact_note']}</i>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Personalized Offer
+            st.markdown(f"""
+            <div class="strategy-card" style="border-left-color: #2ca02c;">
+                <div class="strategy-header" style="color: #2ca02c;">🎁 Personalized Offer</div>
+                <div class="strategy-content">
+                    <b>{strategy['offer']}</b><br>
+                    <i>{strategy['segment_note']}</i>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Key Talking Points
+            st.markdown(f"""
+            <div class="strategy-card" style="border-left-color: #ff7f0e;">
+                <div class="strategy-header" style="color: #ff7f0e;">💬 Key Talking Points</div>
+                <div class="strategy-content">
+                    {'<br>'.join([f'• {point}' for point in strategy['talking_points']])}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Action Items
+            st.markdown("""
+            <div class="strategy-card" style="border-left-color: #d62728;">
+                <div class="strategy-header" style="color: #d62728;">✅ Action Items</div>
+                <div class="strategy-content">
+                    1. Review customer account and recent interactions<br>
+                    2. Prepare personalized offer details and approval<br>
+                    3. Schedule contact using recommended method<br>
+                    4. Follow up within 72 hours if no response<br>
+                    5. Document outcome and update retention metrics
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         
         else:
             # Customer will stay - show appreciation message
@@ -925,9 +810,9 @@ def main():
     st.markdown("""
     <div style='text-align: center; color: #666; padding: 2rem 0;'>
     <p style='font-size: 1.2rem; font-weight: 600;'>🤖 Hybrid AI Churn-Bot</p>
-    <p style='font-size: 0.9rem;'>Powered by MLflow + SHAP + Google Gemini 1.5 Flash</p>
-    <p style='font-size: 0.85rem; color: #999;'>Combining Predictive AI + Explainable AI + Generative AI</p>
-    <p style='font-size: 0.8rem; margin-top: 1rem;'>⚡ Lightning-fast predictions • 🧠 Crystal-clear explanations • ✨ AI-powered retention</p>
+    <p style='font-size: 0.9rem;'>Powered by MLflow + SHAP</p>
+    <p style='font-size: 0.85rem; color: #999;'>Combining Predictive AI + Explainable AI</p>
+    <p style='font-size: 0.8rem; margin-top: 1rem;'>⚡ Lightning-fast predictions • 🧠 Crystal-clear explanations • 📋 Actionable strategies</p>
     </div>
     """, unsafe_allow_html=True)
 

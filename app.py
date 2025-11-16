@@ -169,49 +169,47 @@ MODEL_NAME = "churn-predictor"
 @st.cache_resource
 def init_mlflow():
     """Initialize MLflow connection and client."""
-    mlflow.set_tracking_uri(f"sqlite:///{TRACKING_DB}")
+    import os
+    # Use relative path for Streamlit Cloud compatibility
+    tracking_uri = f"sqlite:///{os.path.join(os.getcwd(), 'mlflow.db')}"
+    mlflow.set_tracking_uri(tracking_uri)
     return MlflowClient()
 
 @st.cache_resource
 def load_model():
-    """Load the best model from MLflow runs (bypasses registry for Streamlit Cloud compatibility)."""
+    """Load the best model from MLflow runs (direct file loading for Streamlit Cloud)."""
+    import glob
+    import os
+    
     try:
-        client = init_mlflow()
+        # Find all model.pkl files in mlruns
+        project_root = os.getcwd()
+        model_files = glob.glob(os.path.join(project_root, "mlruns/*/*/artifacts/model/model.pkl"))
         
-        # Try to load from model registry first
-        try:
-            versions = client.search_model_versions(f"name='{MODEL_NAME}'")
-            if versions:
-                # Get the latest registered version
-                latest = max(versions, key=lambda mv: int(mv.version))
-                # Load directly from the run artifacts (not from registry URI)
-                run_id = latest.run_id
-                model_uri = f"runs:/{run_id}/model"
-                model = mlflow.pyfunc.load_model(model_uri)
-                return model, f"Registered v{latest.version}"
-        except Exception as e:
-            st.warning(f"Could not load from registry: {e}")
-        
-        # Fallback: Load from any available run
-        runs = client.search_runs(
-            experiment_ids=["1"],
-            order_by=["start_time DESC"],
-            max_results=1
-        )
-        
-        if not runs:
-            st.error(f"No model runs found. Please run train.py first.")
+        if not model_files:
+            st.error("No trained models found in mlruns/ directory.")
+            st.info("The MLOps dashboards will still work, but predictions require a trained model.")
             st.stop()
         
-        # Load model from the most recent run
-        run_id = runs[0].info.run_id
-        model_uri = f"runs:/{run_id}/model"
-        model = mlflow.pyfunc.load_model(model_uri)
-        return model, f"Latest Run"
+        # Sort by modification time to get the latest
+        model_files.sort(key=os.path.getmtime, reverse=True)
+        latest_model_dir = os.path.dirname(model_files[0])
+        
+        # Load the model directly from the directory
+        model = mlflow.pyfunc.load_model(latest_model_dir)
+        
+        # Extract run ID from path for display
+        run_id = latest_model_dir.split('/')[-3]
+        return model, f"Run {run_id[:8]}"
         
     except Exception as e:
         st.error(f"Error loading model: {e}")
-        st.error("Please ensure the model was trained and MLflow files are in the repository.")
+        st.info("""
+        **Troubleshooting:**
+        - Ensure `mlruns/` folder is in your GitHub repository
+        - Check that model files exist in `mlruns/1/*/artifacts/model/`
+        - Try retraining the model locally: `python train.py`
+        """)
         st.stop()
 
 def get_shap_explainer(model):

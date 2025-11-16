@@ -397,9 +397,19 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
         # Disable proxy detection for Groq client on Streamlit Cloud
         # This fixes the "unexpected keyword argument 'proxies'" error
         import httpx
+        import os
         
-        # Create custom HTTP client without proxy
-        http_client = httpx.Client(proxies=None)
+        # Disable all proxy environment variables
+        os.environ.pop('HTTP_PROXY', None)
+        os.environ.pop('HTTPS_PROXY', None)
+        os.environ.pop('http_proxy', None)
+        os.environ.pop('https_proxy', None)
+        
+        # Create custom HTTP client with explicit no-proxy configuration
+        http_client = httpx.Client(
+            proxies={},  # Empty dict instead of None
+            trust_env=False  # Don't trust environment proxy settings
+        )
         
         # Initialize Groq client with custom HTTP client
         client = Groq(api_key=api_key, http_client=http_client)

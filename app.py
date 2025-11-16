@@ -31,20 +31,16 @@ st.set_page_config(
 # Custom CSS for stunning styling
 st.markdown("""
     <style>
-    @impor        # SHAP waterfall plot
-        with st.expander("📊 Advanced: SHAP Waterfall Plot (Technical View)", expanded=False):
-            st.info("This plot shows how each feature pushed the prediction away from the baseline.")
-            fig = plot_shap_waterfall(explainer, shap_values, feature_names)
-            st.pyplot(fig)('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
     * {
-        font-family: 'Poppins', sans-serif;
+        font-family: 'Inter', sans-serif;
     }
     
     .main-header {
         font-size: 3.5rem;
         font-weight: 700;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
@@ -61,91 +57,186 @@ st.markdown("""
     
     .subtitle {
         text-align: center;
-        color: #666;
+        color: #64748b;
         font-size: 1.2rem;
         margin-bottom: 2rem;
+        font-weight: 500;
     }
     
-    .metric-card {
+    /* Modern Card Styling */
+    .stMetric {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1.5rem;
-        border-radius: 15px;
+        border-radius: 16px;
         color: white;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        transition: transform 0.3s ease;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
     }
     
-    .metric-card:hover {
-        transform: translateY(-5px);
+    .stAlert {
+        border-radius: 12px;
+        border-left: 4px solid;
     }
     
-    .stAlert > div {
-        padding: 1.5rem;
-        border-radius: 15px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    .stAlert[data-baseweb="notification"] > div {
+        border-radius: 12px;
     }
     
-    .explanation-box {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin: 1rem 0;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
+    /* Success/Stay - Emerald Green Theme */
     .stay-reason {
-        background: linear-gradient(135deg, #d4edda 0%, #a3d9a5 100%);
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
         padding: 1.5rem;
-        border-radius: 15px;
-        border-left: 5px solid #28a745;
+        border-radius: 16px;
+        border-left: 5px solid #10b981;
         margin: 1rem 0;
-        color: #155724;
+        color: #065f46;
         font-weight: 500;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
     }
     
+    /* Churn/Risk - Rose Red Theme */
     .churn-reason {
-        background: linear-gradient(135deg, #f8d7da 0%, #f5c2c7 100%);
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
         padding: 1.5rem;
-        border-radius: 15px;
-        border-left: 5px solid #dc3545;
+        border-radius: 16px;
+        border-left: 5px solid #ef4444;
         margin: 1rem 0;
-        color: #721c24;
+        color: #991b1b;
         font-weight: 500;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
     }
     
-    .email-box {
-        background: linear-gradient(135deg, #fff5e6 0%, #ffe4b3 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        border: 2px solid #ffa500;
+    /* Explanation Box - Slate Gray */
+    .explanation-box {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        padding: 2rem;
+        border-radius: 16px;
         margin: 1rem 0;
-        color: #856404;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #cbd5e1;
     }
     
+    /* Strategy Cards - Modern Professional */
+    .strategy-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 4px solid #3b82f6;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        margin-bottom: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .strategy-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+    
+    .strategy-header {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .strategy-content {
+        color: #475569;
+        line-height: 1.7;
+        font-size: 0.95rem;
+    }
+    
+    /* Factor Items - Clean Modern Style */
+    .factor-item {
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        color: #334155;
+        border-left: 3px solid #3b82f6;
+        transition: all 0.2s;
+    }
+    
+    .factor-item:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transform: translateX(4px);
+    }
+    
+    /* Modern Button Styling */
     .stButton > button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border-radius: 25px;
+        border-radius: 12px;
         padding: 0.75rem 2rem;
         border: none;
         font-weight: 600;
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         transition: all 0.3s ease;
+        font-size: 1rem;
     }
     
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     }
     
-    .factor-item {
-        padding: 0.75rem;
-        margin: 0.5rem 0;
+    /* Sidebar Styling */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+    
+    /* Progress bars */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         border-radius: 10px;
-        background: white;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        color: #333;
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-radius: 8px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    /* Metrics - Enhanced */
+    div[data-testid="stMetricValue"] {
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+    }
+    
+    div[data-testid="stMetricLabel"] {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+    }
+    
+    /* Info boxes */
+    .stInfo {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-left: 4px solid #3b82f6;
+        color: #1e40af;
+    }
+    
+    .stSuccess {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-left: 4px solid #10b981;
+        color: #065f46;
+    }
+    
+    .stWarning {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-left: 4px solid #f59e0b;
+        color: #92400e;
+    }
+    
+    .stError {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-left: 4px solid #ef4444;
+        color: #991b1b;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -675,7 +766,7 @@ def main():
                 st.progress(min(abs(row['Impact']) / feature_importance['Impact'].abs().max(), 1.0))
         
         # SHAP waterfall plot
-        with st.expander("� Advanced: SHAP Waterfall Plot (Technical View)", expanded=False):
+        with st.expander("📊 Advanced: SHAP Waterfall Plot (Technical View)", expanded=False):
             st.info("This plot shows how each feature pushed the prediction away from the baseline.")
             fig = plot_shap_waterfall(explainer, shap_values, feature_names)
             st.pyplot(fig)
@@ -698,20 +789,32 @@ def main():
                 .strategy-card {
                     background: white;
                     padding: 1.5rem;
-                    border-radius: 10px;
-                    border-left: 4px solid #1f77b4;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    border-radius: 12px;
+                    border-left: 4px solid #3b82f6;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
                     margin-bottom: 1rem;
+                    transition: transform 0.2s, box-shadow 0.2s;
                 }
+                
+                .strategy-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+                }
+                
                 .strategy-header {
                     font-size: 1.1rem;
-                    font-weight: bold;
-                    color: #1f77b4;
-                    margin-bottom: 0.5rem;
+                    font-weight: 700;
+                    color: #1e293b;
+                    margin-bottom: 0.75rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
                 }
+                
                 .strategy-content {
-                    color: #333;
-                    line-height: 1.6;
+                    color: #475569;
+                    line-height: 1.7;
+                    font-size: 0.95rem;
                 }
                 </style>
             """, unsafe_allow_html=True)

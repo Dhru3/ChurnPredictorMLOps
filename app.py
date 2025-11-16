@@ -391,8 +391,8 @@ def generate_retention_strategy(customer_data, prediction, probability, top_fact
         # 2. Configure the Gemini client
         genai.configure(api_key=api_key)
         
-        # 3. Initialize the model (gemini-1.5-flash has better free tier limits)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # 3. Initialize the model (gemini-pro is the stable free tier model)
+        model = genai.GenerativeModel('gemini-pro')
         
         st.toast("Gemini client initialized successfully!", icon="✅")
         
@@ -674,7 +674,7 @@ def main():
     # Display model info with style
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.info("🚀 **Active Model**: v1.0 (churn_pipeline.pkl) | **Powered by**: Google Gemini 1.5 Flash")
+        st.info("🚀 **Active Model**: v1.0 (churn_pipeline.pkl) | **Powered by**: Google Gemini Pro")
     
     # Sidebar input form
     customer_data = create_input_form()
@@ -692,7 +692,7 @@ def main():
         
         - **🎯 Predictive AI**: MLflow-registered RandomForest model for churn prediction
         - **🧠 Explainable AI**: SHAP analysis showing *why* customers churn
-        - **✨ Generative AI**: Google Gemini 1.5 Flash creating personalized retention emails
+        - **✨ Generative AI**: Google Gemini Pro creating personalized retention emails
         
         </div>
         
@@ -727,7 +727,7 @@ def main():
         with col3:
             st.metric("⚡ Avg Response Time", "<2s", help="Prediction + Explanation + AI Email")
         with col4:
-            st.metric("🤖 AI Model", "Gemini 1.5 Flash", help="Google AI-powered generation")
+            st.metric("🤖 AI Model", "Gemini Pro", help="Google AI-powered generation")
         
     else:
         # Make prediction
@@ -841,7 +841,7 @@ def main():
         if prediction == "Yes":
             st.markdown("## ✉️ AI-Generated Retention Email")
             st.markdown("### 💼 Professional Email Drafted by AI")
-            st.info("🤖 This email was personalized using Google Gemini 1.5 Flash based on customer segment, risk level, and specific pain points.")
+            st.info("🤖 This email was personalized using Google Gemini Pro based on customer segment, risk level, and specific pain points.")
             
             with st.spinner("✍️ Drafting personalized retention email..."):
                 email_content = generate_retention_strategy(
@@ -925,7 +925,7 @@ def main():
     st.markdown("""
     <div style='text-align: center; color: #666; padding: 2rem 0;'>
     <p style='font-size: 1.2rem; font-weight: 600;'>🤖 Hybrid AI Churn-Bot</p>
-    <p style='font-size: 0.9rem;'>Powered by MLflow + SHAP + Google Gemini 1.5 Flash</p>
+    <p style='font-size: 0.9rem;'>Powered by MLflow + SHAP + Google Gemini Pro</p>
     <p style='font-size: 0.85rem; color: #999;'>Combining Predictive AI + Explainable AI + Generative AI</p>
     <p style='font-size: 0.8rem; margin-top: 1rem;'>⚡ Lightning-fast predictions • 🧠 Crystal-clear explanations • ✨ AI-powered retention</p>
     </div>
